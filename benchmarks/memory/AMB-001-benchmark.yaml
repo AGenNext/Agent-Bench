@@ -1,0 +1,182 @@
+benchmark_id: AMB-001
+name: Agent Memory Recall & Conflict Resolution
+version: "0.1.0"
+domain: agent_memory
+objective: >
+  Compare agent memory frameworks on recall accuracy, conflict handling,
+  gap protocol, decay behaviour, and cold-start latency across reproducible
+  multi-turn interaction scenarios. All tasks designed to expose the
+  differences that matter in production: not toy retrieval, but the
+  hard cases where frameworks diverge.
+
+participants:
+  - id: agent-memory
+    repo: https://github.com/AGenNext/Agent-Memory
+    version: "0.1.0"
+    install: "cargo add agent-memory"
+  - id: mem0
+    repo: https://github.com/mem0ai/mem0
+    version: latest
+    install: "pip install mem0ai"
+  - id: zep
+    repo: https://github.com/getzep/zep
+    version: latest
+    install: "pip install zep-cloud"
+  - id: letta
+    repo: https://github.com/cpacker/MemGPT
+    version: latest
+    install: "pip install letta"
+
+input_artifacts:
+  - type: conversation_fixture
+    path: fixtures/conversations/
+    description: >
+      30 multi-turn conversations across 5 domains: personal assistant,
+      software engineering, project management, customer support, research.
+      Each conversation includes deliberate misstatements, corrections,
+      time-referenced queries, and factual disputes.
+
+  - type: query_set
+    path: fixtures/queries/
+    description: >
+      100 recall queries across 6 categories:
+        - identity_recall (what does the user prefer)
+        - temporal_recall (what did we discuss last Tuesday)
+        - conflict_queries (you told me X, but chat log says Y)
+        - gap_queries (agent has no record, human insists it exists)
+        - decay_queries (recall something from 30 days ago)
+        - cross_session_queries (recall across multiple sessions)
+
+expected_outputs:
+  - metric: recall_accuracy
+    description: >
+      % of queries where the framework returns the correct memory.
+      Gold answers defined per query fixture.
+    threshold: ">= 0.70"
+
+  - metric: tier_distribution
+    description: >
+      For frameworks with tiered retrieval, what % of queries resolve
+      at each tier. Agent-Memory specific — recorded but not used for
+      cross-framework comparison.
+
+  - metric: gap_handling
+    description: >
+      For gap_queries: does the framework return a useful signal
+      (suggested prompt, gap indicator) rather than empty results?
+      Binary per query. Score = % of gap queries handled gracefully.
+    threshold: ">= 0.50"
+
+  - metric: conflict_handling
+    description: >
+      For conflict_queries: does the framework distinguish misinterpretation
+      from factual dispute? Does it preserve the original record?
+      Scored 0/1/2 per query (0=no handling, 1=partial, 2=correct).
+    threshold: ">= 1.0 avg"
+
+  - metric: cold_start_latency_ms
+    description: >
+      Time from process start to first successful recall query.
+      Measures embedded vs external dependency cost.
+
+  - metric: p50_recall_latency_ms
+    description: Median recall latency across all 100 queries.
+
+  - metric: p99_recall_latency_ms
+    description: 99th percentile recall latency.
+
+  - metric: external_deps_required
+    description: >
+      Count of external processes/services required at runtime.
+      agent-memory = 0 (embedded). Others vary.
+
+constraints:
+  - All runs on identical hardware (record in reproducibility manifest)
+  - No pre-warming of caches between framework runs
+  - Same LLM (Claude claude-sonnet-4-20250514) for all frameworks that use one
+  - Same embedding model (text-embedding-3-small) for all vector searches
+  - Cold start for each framework (fresh data directory)
+  - 30-second timeout per query
+
+fixtures:
+  - path: fixtures/conversations/personal_assistant_01.json
+    description: 15-turn conversation, user corrects preference at turn 8
+  - path: fixtures/conversations/engineering_project_01.json
+    description: 20-turn conversation, budget number disputed at turn 15
+  - path: fixtures/conversations/customer_support_01.json
+    description: 10-turn conversation, user insists on previous session context
+  - path: fixtures/queries/identity_recall.json
+    description: 20 identity recall queries
+  - path: fixtures/queries/temporal_recall.json
+    description: 20 temporal recall queries with time anchors
+  - path: fixtures/queries/conflict_queries.json
+    description: 20 conflict scenario queries
+  - path: fixtures/queries/gap_queries.json
+    description: 20 gap queries (human insists, no memory exists)
+  - path: fixtures/queries/decay_queries.json
+    description: 10 queries for memories written 30 days prior
+  - path: fixtures/queries/cross_session.json
+    description: 10 cross-session recall queries
+
+execution_steps:
+  - step: 1
+    name: Ingest fixtures
+    description: Load all conversation fixtures into each framework's memory store
+    timeout_secs: 300
+
+  - step: 2
+    name: Run recall queries
+    description: Execute all 100 queries against each framework, record latency and result
+    timeout_secs: 600
+
+  - step: 3
+    name: Score results
+    description: >
+      Compare results against gold answers. Use Agent-Eval scoring functions.
+      Human review required for conflict_handling metric (automated scoring
+      insufficient for nuanced conflict resolution assessment).
+    timeout_secs: 300
+
+  - step: 4
+    name: Package results
+    description: >
+      Emit benchmark result package per benchmark-contract.md schema.
+      Include full query/result traces as evidence.
+
+evaluation_refs:
+  - agent-eval/scoring/recall_accuracy.py
+  - agent-eval/scoring/gap_handling.py
+  - agent-eval/scoring/conflict_handling.py
+  - agent-eval/scoring/latency.py
+
+pass_thresholds:
+  recall_accuracy:          0.70
+  gap_handling:             0.50
+  conflict_handling_avg:    1.0
+  cold_start_latency_ms:    5000
+  p50_recall_latency_ms:    500
+  p99_recall_latency_ms:    2000
+
+repeatability_requirements:
+  - Record hardware spec (CPU, RAM, OS) in result package
+  - Record framework versions in result package
+  - Record LLM and embedding model versions
+  - Seed random number generators where applicable
+  - Publish full fixture set and query set with results
+  - Publish evaluation harness code
+
+notes:
+  - >
+    Conflict handling and gap handling are categories where most frameworks
+    return empty results or throw errors. The threshold (0.50 for gap, 1.0 avg
+    for conflict) is intentionally achievable — the point is to measure the
+    gap between frameworks, not to fail everyone.
+  - >
+    Decay queries require that frameworks support time-based decay or at
+    minimum age-aware retrieval. Frameworks without decay models will score
+    either very high (no decay = perfect recall) or very low (no filtering
+    of stale memories = noise).
+  - >
+    Results will be published at github.com/AGenNext/Agent-Bench/results/
+    starting from first run. Metrics will be published daily as live
+    deployments accumulate data.
