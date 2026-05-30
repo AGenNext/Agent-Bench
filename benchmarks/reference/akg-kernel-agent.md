@@ -82,6 +82,23 @@ scored on *correctness* (efficacy) and *speedup* (a performance ratio), with a
 harder dynamic-shape variant designed to defeat reward hacking — directly
 echoing the construct-validity concerns in our other references.
 
+The platform's run model is **hardware- and DSL-aware** (`hardware`, `dsl`
+fields; `metrics/perf.rs` for speedup/`fast_p`) precisely to score this class of
+benchmark, and rankings are sliced per hardware backend.
+
+### Kernel artifact registry — Hugging Face Kernels Hub
+[HF Kernels Hub](https://huggingface.co/docs/kernels/index) (`from kernels import
+get_kernel`) is the natural **artifact registry** for kernel-synthesis runs: it
+serves pre-compiled kernels keyed to the environment's **compute capability +
+PyTorch + CUDA** build, with kernels as a first-class Hub repo type surfacing
+supported hardware/versions. Integration points for Agent-Bench:
+- **Baselines**: pull reference kernels from the Hub for the target hardware.
+- **Submitted artifacts**: generated kernels are published to / loaded from the
+  Hub; a run's `hardware` taxonomy should align with the Hub's build matrix
+  (compute capability, Torch version, CUDA version, C++ ABI).
+- **Reproducibility**: the Hub build coordinates pin exactly which binary ran,
+  feeding the result package's reproducibility manifest.
+
 ---
 
 ## 3. Formulas / metric definitions
