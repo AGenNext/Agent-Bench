@@ -50,3 +50,24 @@ component:       <where it fits in DESIGN.md>
 
 A PR merges when: tests green, `DESIGN.md` accurate, scope focused, and (for
 protocol changes) a version bump is included.
+
+## Production release — human-approved
+
+Everything up to merge can be **agent-driven**: issues, PRs, tests, review, and
+merge to the default branch. **Production release is not.**
+
+- A **human must approve** any promotion to production. This is a hard gate, not
+  a courtesy.
+- Implement it as a protected **deploy environment** requiring a human reviewer
+  (GitHub Environments protection rule / required approver), plus `CODEOWNERS` on
+  release tags.
+- Agents may *prepare* a release (cut the branch, draft notes, get CI green) but
+  may **not** approve or trigger the production deploy.
+
+The release also **conforms to the already-defined rules** (the
+governance/policy rules owned in their respective layer): those are checked
+automatically, and the human approval is the final sign-off *on top of* passing
+rule-conformance — not a replacement for it.
+
+In short: **automate up to the edge of production; defined rules are enforced
+automatically; a human signs off to cross it.**
