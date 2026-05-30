@@ -13,6 +13,9 @@ repos and must not be reimplemented here.
 | **[Agent-Compliance](https://github.com/AGenNext/Agent-Compliance)** | Compliance frameworks — SOC 2, EU AI Act, NIST AI RMF, OWASP Agentic mappings, evidence & attestation | Benchmark result packages feed compliance evidence; framework mappings owned here |
 | **[Agent-Guard](https://github.com/AGenNext/Agent-Guard)** | Guardrails for every agent — input/output filtering, policy at inference time | **Enforces** agent behavior at runtime; Agent-Bench measures how agents fare against guardrail-style threats |
 | **[Agent-Cognitive-Guard](https://github.com/AGenNext/Agent-Cognitive-Guard)** | Cognitive-layer safety — reasoning/intent monitoring, jailbreak & prompt-injection detection | Detects/blocks at the cognitive layer; its signals feed the Assurance (PAS) metric |
+| **[Agent-Security](https://github.com/AGenNext/Agent-Security)** | Security plane — threat detection, posture, incident response across the fleet | Provides the security signals/threat model; Agent-Bench measures agents against them |
+| **[Agent-Health](https://github.com/AGenNext/Agent-Health)** | Agent health & SRE — liveness, drift, reliability monitoring of deployed agents | Live health metrics complement benchmark Reliability (pass@k); shared telemetry |
+| **[Agent-Risk](https://github.com/AGenNext/Agent-Risk)** | Risk management — risk scoring, assessment, registers across agents | Consumes benchmark scores + Assurance as risk inputs |
 | **[Agent-LCM](https://github.com/AGenNext/Agent-LCM)** | Agent Lifecycle Management — versioning, promotion, rollout, retirement | **Consumes Agent-Bench rankings**: eval results gate promotion/retirement |
 | **[Agent-Memory](https://github.com/AGenNext/Agent-Memory)** | Agent memory layer (recall, conflict, decay) | Benchmarked by the AMB-001 suite |
 | **Agent-Eval** | Reusable scoring functions, rubrics, CLEAR components | Agent-Bench calls these for scoring |

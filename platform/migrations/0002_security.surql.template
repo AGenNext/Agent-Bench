@@ -1,0 +1,40 @@
+-- Migration 0002 — SurrealDB-native security (TEMPLATE, not auto-applied).
+--
+-- Apply per namespace once the platform forwards Agent-Auth (casdoor) JWTs to
+-- SurrealDB instead of connecting as root. Replace <…> placeholders and add to
+-- the MIGRATIONS list in src/db.rs when going live. See docs/surrealdb-security.md.
+--
+-- System users (root/NS/DB) bypass these permissions, so existing root-connected
+-- flows are unaffected; permissions bind to JWT/record auth (real user requests).
+
+-- Verify externally-issued tokens from Agent-Auth / casdoor.
+DEFINE ACCESS agent_auth ON DATABASE TYPE JWT
+    ALGORITHM RS256 KEY "-----BEGIN PUBLIC KEY-----
+<casdoor public key / JWKS>
+-----END PUBLIC KEY-----"
+    DURATION FOR SESSION 12h;
+
+-- Record-level permissions. $auth = resolved record, $token = JWT claims.
+DEFINE TABLE agent SCHEMAFULL
+  PERMISSIONS
+    FOR select WHERE owner = $auth.id OR $token.roles CONTAINS "viewer"
+    FOR create, update, delete WHERE owner = $auth.id OR $token.roles CONTAINS "admin";
+
+DEFINE TABLE benchmark SCHEMAFULL
+  PERMISSIONS
+    FOR select WHERE true
+    FOR create, update, delete WHERE $token.roles CONTAINS "admin";
+
+DEFINE TABLE run SCHEMAFULL
+  PERMISSIONS
+    FOR select WHERE agent.owner = $auth.id OR $token.roles CONTAINS "viewer"
+    FOR create WHERE $token.roles CONTAINS "submitter";
+
+DEFINE TABLE task_result SCHEMAFULL
+  PERMISSIONS
+    FOR select WHERE run.agent.owner = $auth.id OR $token.roles CONTAINS "viewer"
+    FOR create WHERE $token.roles CONTAINS "submitter";
+
+-- Immutable audit trail for compliance evidence (Agent-Compliance consumes it).
+DEFINE TABLE run        CHANGEFEED 30d;
+DEFINE TABLE task_result CHANGEFEED 30d;
