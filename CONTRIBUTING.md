@@ -46,28 +46,41 @@ component:       <where it fits in DESIGN.md>
 7. **Conventional commits** for messages (`feat:`, `fix:`, `docs:`, `chore:`,
    `test:`, `refactor:`).
 
+## Frontend — standardized component library only
+
+Agent-Bench is backend (Rust API) today. **If** any UI is added (e.g. a
+leaderboard view):
+
+- Use **only the shared/standardized component library** — no bespoke or one-off
+  components. Frontend design is standardized across the org.
+- The design system / component library is **owned in its respective repo** and
+  published to the **artifact registry**; depend on the **versioned registry
+  artifact** — don't fork, vendor, or re-implement it.
+- Frontend code is TypeScript and limited to presentation/validation — no
+  business logic (that lives in the backend/runtime).
+
 ## Review
 
 A PR merges when: tests green, `DESIGN.md` accurate, scope focused, and (for
 protocol changes) a version bump is included.
 
-## Production release — human-approved
+## Production release — owned & enforced by Agent-Deploy
 
 Everything up to merge can be **agent-driven**: issues, PRs, tests, review, and
-merge to the default branch. **Production release is not.**
+merge to the default branch. **Production release is not owned by this repo.**
 
-- A **human must approve** any promotion to production. This is a hard gate, not
-  a courtesy.
-- Implement it as a protected **deploy environment** requiring a human reviewer
-  (GitHub Environments protection rule / required approver), plus `CODEOWNERS` on
-  release tags.
-- Agents may *prepare* a release (cut the branch, draft notes, get CI green) but
-  may **not** approve or trigger the production deploy.
+- **Agent-Deploy** owns and **enforces** CI/CD, release/rollback, centralized
+  governance validation, operational-readiness gates, and the **human-approval**
+  step for production promotion. The already-defined rules live there and are
+  enforced there — automatically, not by convention.
+- A **human must approve** any production promotion (hard gate), via Agent-Deploy's
+  protected deploy environment / required approver.
+- Agents may *prepare* a release (cut a branch, draft notes, get CI green) but may
+  **not** approve or trigger the production deploy.
 
-The release also **conforms to the already-defined rules** (the
-governance/policy rules owned in their respective layer): those are checked
-automatically, and the human approval is the final sign-off *on top of* passing
-rule-conformance — not a replacement for it.
+Agent-Bench's part is to **conform** and to **supply the evidence** Agent-Deploy's
+gates consume — the certified evaluation result (how good / what next). It does
+not define or run the release process.
 
-In short: **automate up to the edge of production; defined rules are enforced
-automatically; a human signs off to cross it.**
+> The `platform/deploy/` manifests here are for local/dev and as a reference;
+> production deployment, gating, and rule enforcement are Agent-Deploy's.
