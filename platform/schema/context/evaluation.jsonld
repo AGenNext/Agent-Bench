@@ -1,0 +1,17 @@
+{
+  "@context": {
+    "schema": "https://schema.org/",
+    "ab": "https://agent-bench.dev/ns#",
+
+    "Evaluation": "ab:Evaluation",
+    "subject": { "@id": "schema:about", "@type": "@id" },
+    "attribute": "ab:attribute",
+    "protocol": "ab:protocol",
+    "grade": "schema:ratingValue",
+    "passed": "ab:passed",
+    "metrics": "ab:metrics",
+    "improvementAreas": "ab:improvementArea",
+    "conditions": "ab:conditions",
+    "evaluatedAt": { "@id": "schema:dateCreated", "@type": "schema:DateTime" }
+  }
+}

@@ -12,6 +12,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::attributes::memory::MemoryVerdict;
 
+/// Canonical site that serves the evaluation JSON-LD `@context`
+/// (the vocabulary document is `schema/context/evaluation.jsonld`). Instances
+/// reference this URL so meaning is resolved from one authoritative place.
+pub const EVALUATION_CONTEXT: &str = "https://agent-bench.dev/ns/evaluation.jsonld";
+
 /// The documented test conditions under which a result was produced — the
 /// provenance that makes the card entry a reproducible claim ("tested under
 /// *these conditions* → *this result*").
@@ -100,20 +105,10 @@ impl CardEval {
     /// the terms without out-of-band agreement.
     pub fn as_jsonld(&self) -> serde_json::Value {
         serde_json::json!({
-            "@context": {
-                "schema": "https://schema.org/",
-                "ab": "https://agent-bench.dev/ns#",
-                "subject": { "@id": "schema:about", "@type": "@id" },
-                "attribute": "ab:attribute",
-                "protocol": "ab:protocol",
-                "grade": "schema:ratingValue",
-                "passed": "ab:passed",
-                "metrics": "ab:metrics",
-                "improvementAreas": "ab:improvementArea",
-                "conditions": "ab:conditions",
-                "evaluatedAt": { "@id": "schema:dateCreated", "@type": "schema:DateTime" }
-            },
-            "@type": "ab:Evaluation",
+            // Reference the canonical context document, not an inline copy —
+            // one authoritative source of meaning.
+            "@context": EVALUATION_CONTEXT,
+            "@type": "Evaluation",
             "subject": self.subject_did,
             "attribute": self.attribute,
             "protocol": self.conditions.protocol,
@@ -189,13 +184,12 @@ mod tests {
         let card = CardEval::from_memory("did:agent:strong", conditions(), &v);
         let ld = card.as_jsonld();
 
-        // Self-describing: the @context carries the meaning.
-        assert_eq!(ld["@context"]["schema"], "https://schema.org/");
-        assert_eq!(ld["@type"], "ab:Evaluation");
+        // @context references the canonical site (one authoritative meaning).
+        assert_eq!(ld["@context"], EVALUATION_CONTEXT);
+        assert_eq!(ld["@type"], "Evaluation");
         assert_eq!(ld["subject"], "did:agent:strong");
         assert_eq!(ld["protocol"], "AMB-001@0.1.0");
         assert!(ld["grade"].is_number());
-        assert_eq!(ld["@context"]["grade"], "schema:ratingValue");
     }
 
     #[test]
