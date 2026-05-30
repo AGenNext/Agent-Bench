@@ -7,6 +7,7 @@
 //!   over embedded SurrealDB, behind the `server` feature.
 
 pub mod attributes;
+pub mod card;
 pub mod domain;
 pub mod metrics;
 pub mod scoring;

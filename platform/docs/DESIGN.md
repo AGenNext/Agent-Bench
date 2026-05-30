@@ -32,9 +32,10 @@ paths) or is a declared schema. No philosophy — just the design.
 >
 > Each registry entry has an **identity** (DID) and a **card** (its metadata
 > descriptor — model-card / agent-card style). Agent-Bench **binds every result
-> to the subject's identity**, and the certified scores **feed the card**. The
-> identity + card schema is owned by the registry; Agent-Bench references the
-> identity and contributes evaluation results to the card.
+> to the subject's identity** and **actually updates the card's values** — it
+> writes the evaluation block (grade, scores, improvement areas, protocol@version)
+> into the card via a patch keyed by attribute (`src/card.rs`). The card *schema*
+> is owned by the registry; Agent-Bench owns and writes the evaluation values.
 
 ## Component map
 
@@ -53,6 +54,7 @@ implementing file.
 | **Progress** (`src/metrics/progress.rs`) | incremental task advancement | how far did it get | matching scores / subgoals; actions | — | progress rate, success rate, grounding accuracy |
 | **Perf** (`src/metrics/perf.rs`) | multi-hardware kernel/codegen perf | how fast + correct | `PerfObservation[]` (correct, baseline vs kernel latency) | per-hardware target | `PerfScores` (correctness, geomean speedup, `fast_p`) |
 | **Scoring** (`src/scoring.rs`) | aggregate a run | run-level answer | `TaskResult[]` | `ClearWeights` | `RunScores` + `improvement_areas()` |
+| **Card update** (`src/card.rs`) | write results to the subject's card | persists the answers on the subject | a verdict + subject DID + `protocol@v` | registry card schema | `CardEval` + `as_card_patch()` (keyed by attribute) |
 
 ### Service layer (`server` feature)
 
