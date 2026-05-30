@@ -94,6 +94,20 @@ DEFINE FIELD passed           ON leaderboard_row TYPE bool;
 DEFINE FIELD level            ON leaderboard_row TYPE option<string>;
 DEFINE FIELD conditions_hash  ON leaderboard_row TYPE option<string>;
 
+-- --- Level scheme: maturity bands (grade -> level). Inputs, not hardcoded. ---
+-- Ships with the Salesforce Agentic Maturity Model (4 levels); add others.
+DEFINE TABLE level_scheme SCHEMAFULL;
+DEFINE FIELD scheme    ON level_scheme TYPE string;
+DEFINE FIELD level     ON level_scheme TYPE int;
+DEFINE FIELD name      ON level_scheme TYPE string;
+DEFINE FIELD min_grade ON level_scheme TYPE float;
+DEFINE INDEX level_scheme_uid ON level_scheme FIELDS scheme, level UNIQUE;
+
+UPSERT level_scheme:`salesforce-agentic:1` SET scheme='salesforce-agentic', level=1, name='Fixed-Function',             min_grade=0.0;
+UPSERT level_scheme:`salesforce-agentic:2` SET scheme='salesforce-agentic', level=2, name='Knowledge & Reasoning',     min_grade=0.50;
+UPSERT level_scheme:`salesforce-agentic:3` SET scheme='salesforce-agentic', level=3, name='Multistep / Multi-turn',    min_grade=0.70;
+UPSERT level_scheme:`salesforce-agentic:4` SET scheme='salesforce-agentic', level=4, name='Multi-Agent / Autonomous',  min_grade=0.90;
+
 -- --- Graph relations (crawl/construct) --------------------------------------
 DEFINE TABLE has_attribute  TYPE RELATION FROM entity          TO attribute;
 DEFINE TABLE uses_protocol  TYPE RELATION FROM evaluation      TO protocol;
