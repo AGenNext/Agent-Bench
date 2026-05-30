@@ -102,6 +102,66 @@ relevance needs change.** Versioned, governed evolution gives both — the meani
 is sacrosanct within a version and advances responsibly across versions, steered
 by research and by the enforcement models that regulators actually use.
 
+## Versioned protocols become the enforcement
+
+In a permissionless federation there is no central authority to *grant* or
+*deny* — so **enforcement is realized as conformance to a versioned protocol.**
+The protocol *is* the enforcement: a thing that doesn't conform simply fails
+verification, everywhere, without anyone having to block it.
+
+```
+protocol@v = grammar + semantics (formulas) + schema + conformance suite
+artifact/attestation/agent  declares  protocol@v
+consumer/gate  verifies conformance to protocol@v   →  pass = trusted, fail = rejected
+```
+
+- **The version is the contract.** Each protocol version pins exact meaning +
+  a **machine-checkable conformance suite** (cf. AGT's RFCs + conformance tests).
+  Declaring `protocol@v` is a binding, verifiable commitment.
+- **Enforcement is distributed.** Every consumer enforces locally by checking
+  conformance — no central PEP required. The same check yields the same verdict
+  anywhere, because the protocol version is canonical and interoperable.
+- **Non-conformance self-rejects.** You can't be stopped from *providing* a
+  service, but a service/attestation that doesn't conform to the declared
+  protocol version won't *verify* — so it isn't consumed. Capability stays open;
+  conformance is the gate.
+- **Evolution stays safe.** New behavior ships as a new protocol version with its
+  own conformance suite; old versions keep verifying under their own rules
+  (backward-resolvable). Upgrading enforcement = adopting a new protocol version.
+
+This is the bridge from "meaning is sacrosanct" to "the runtime enforces":
+**the versioned protocol carries the meaning *and* the enforcement** — define the
+grammar, semantics, schema, and conformance tests once per version, and
+verification against that version becomes the enforcement, executed by whoever is
+consuming.
+
+### Research, theory, test — the precursors to enforcement
+
+Nothing becomes enforcement directly. A capability matures through **precursor
+stages** before it is allowed to bind as protocol:
+
+```
+research ──► theory ──► test ──► protocol@v ──► enforcement
+(papers,     (formal      (benchmarks +    (canonical,     (conformance
+ reference    grounding,    unit +          versioned        verified by
+ library)     IRT, proofs)  conformance)    semantics)       consumers)
+```
+
+- **Research** — observed in the field; enters via the **reference library**
+  (e.g. scaffold-driven shift, reward hacking, CLEAR dimensions).
+- **Theory** — formal grounding for *why* it holds (e.g. IRT/Fisher information
+  behind mid-range selection; geometric mean for ratio aggregation).
+- **Test** — empirically validated: benchmark runs, unit tests, and a
+  **conformance suite** that pins the behavior machine-checkably.
+- **Only then → protocol@v** — promoted into the canonical, versioned language,
+  at which point conformance verification makes it enforcement.
+
+So enforcement is **earned**, not declared: a metric or rule is researched,
+theoretically justified, and tested first — and the test artifacts *become* the
+conformance suite that later enforces it. This keeps the language credible
+(grounded in research + theory) and the enforcement trustworthy (backed by
+tests), closing the loop with governed evolution above.
+
 ## What this means for Agent-Bench
 
 Agent-Bench is a **steward of the evaluation language**: its glossary + formulas
