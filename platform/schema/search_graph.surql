@@ -23,10 +23,21 @@ DEFINE TABLE measures  TYPE RELATION FROM card_eval TO attribute;
 -- Everything is a searchable node in the site, so MAX context = all nodes,
 -- all files, full logs; MIN context = the current topic node. The agent decides
 -- how far to expand or reduce along the graph, within the site (= this database).
+-- Contextual search scans METADATA, never executable content. Reading
+-- descriptors (path, type, tags, description, digest) is safe; scanning or
+-- running the executable bytes is not — so executables are indexed by metadata
+-- only. Declarative text (docs/markdown) lives in `page` and is searchable there.
 DEFINE TABLE file SCHEMAFULL;
-DEFINE FIELD path    ON file TYPE string;
-DEFINE FIELD content ON file TYPE string;
-DEFINE INDEX file_search ON file FIELDS content SEARCH ANALYZER ab_text BM25 HIGHLIGHTS;
+DEFINE FIELD path         ON file TYPE string;
+DEFINE FIELD content_type ON file TYPE string;                 -- e.g. text/markdown, application/wasm
+DEFINE FIELD kind         ON file TYPE string DEFAULT "artifact"
+    ASSERT $value IN ["artifact", "executable", "doc"];
+DEFINE FIELD digest       ON file TYPE option<string>;         -- content address
+DEFINE FIELD tags         ON file TYPE array<string> DEFAULT [];
+DEFINE FIELD description   ON file TYPE string DEFAULT "";
+-- Search over metadata only (path + description), incl. executables' metadata
+-- (additional) — never file content/bytes.
+DEFINE INDEX file_meta_search ON file FIELDS path, description SEARCH ANALYZER ab_text BM25;
 
 DEFINE TABLE log SCHEMAFULL;
 DEFINE FIELD at      ON log TYPE datetime DEFAULT time::now();
