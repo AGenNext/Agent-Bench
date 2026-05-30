@@ -9,6 +9,8 @@
 pub mod attributes;
 pub mod card;
 pub mod domain;
+pub mod evaluation;
+pub mod judge;
 pub mod metrics;
 pub mod scoring;
 
