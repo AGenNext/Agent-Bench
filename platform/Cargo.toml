@@ -1,0 +1,53 @@
+[package]
+name = "agentbench-platform"
+version = "0.1.0"
+edition = "2021"
+description = "Cloud-native, multi-tenant enterprise agent evaluation & leaderboard platform"
+license = "Apache-2.0"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+
+# --- server stack (optional; pulled in by the `server` feature) ---
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "sync"], optional = true }
+axum = { version = "0.7", optional = true }
+tower = { version = "0.5", optional = true }
+tower-http = { version = "0.6", features = ["trace", "cors"], optional = true }
+thiserror = { version = "2", optional = true }
+async-trait = { version = "0.1", optional = true }
+tracing = { version = "0.1", optional = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
+# SurrealDB embedded ("native"): in-memory + SurrealKV storage engines.
+surrealdb = { version = "2", default-features = false, features = ["kv-mem", "kv-surrealkv"], optional = true }
+
+[features]
+# Default build is the pure-Rust scoring core: fast to compile, fully unit-tested.
+default = []
+# Full multi-tenant server: Axum API over embedded SurrealDB.
+server = [
+    "dep:tokio",
+    "dep:axum",
+    "dep:tower",
+    "dep:tower-http",
+    "dep:thiserror",
+    "dep:async-trait",
+    "dep:tracing",
+    "dep:tracing-subscriber",
+    "dep:surrealdb",
+]
+# SurrealML: enables `DEFINE MODEL` + `ml::*` prediction in SurrealQL.
+surrealml = ["server", "surrealdb/ml"]
+
+[lib]
+name = "agentbench_platform"
+path = "src/lib.rs"
+
+[[bin]]
+name = "agentbench-platform"
+path = "src/main.rs"
+required-features = ["server"]
+
+[profile.dev]
+opt-level = 0
