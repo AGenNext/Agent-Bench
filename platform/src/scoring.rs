@@ -3,6 +3,7 @@
 
 use crate::domain::{RunScores, TaskResult};
 use crate::metrics::clear::{clear_composite, clear_scores, ClearWeights, TaskObservation};
+use crate::metrics::perf::{perf_scores, PerfObservation};
 use crate::metrics::progress::progress_rate_continuous;
 
 /// Compute aggregate CLEAR + progress scores for a run from its task results.
@@ -22,6 +23,17 @@ pub fn score_run(results: &[TaskResult], weights: ClearWeights) -> RunScores {
         .collect();
 
     let clear = clear_scores(&obs);
+
+    // Performance metrics (kernel/codegen): only meaningful when baselines given.
+    let perf_obs: Vec<PerfObservation> = results
+        .iter()
+        .map(|r| PerfObservation {
+            correct: r.correct,
+            baseline_latency_ms: r.baseline_latency_ms,
+            kernel_latency_ms: r.latency_ms,
+        })
+        .collect();
+    let perf = perf_scores(&perf_obs);
 
     // Progress rate: mean of per-task progress rates (each already a max-so-far).
     let progress_rate = if results.is_empty() {
@@ -50,6 +62,7 @@ pub fn score_run(results: &[TaskResult], weights: ClearWeights) -> RunScores {
         progress_rate,
         pass_at_k,
         clear_composite,
+        perf,
     }
 }
 
@@ -84,6 +97,8 @@ mod tests {
             within_sla: sla,
             policy_violation: viol,
             policy_critical: true,
+            correct: success >= 0.5,
+            baseline_latency_ms: 0.0,
         }
     }
 

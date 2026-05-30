@@ -21,7 +21,13 @@ use crate::metrics::clear::ClearWeights;
 use crate::scoring::{improvement_areas, score_run};
 
 /// Ordered migrations embedded into the binary.
-const MIGRATIONS: &[(&str, &str)] = &[("0001_init", include_str!("../migrations/0001_init.surql"))];
+const MIGRATIONS: &[(&str, &str)] = &[
+    ("0001_init", include_str!("../migrations/0001_init.surql")),
+    (
+        "0002_multi_hardware",
+        include_str!("../migrations/0002_multi_hardware.surql"),
+    ),
+];
 
 const DB_NAME: &str = "main";
 
@@ -221,11 +227,14 @@ impl Store {
             .query(
                 "CREATE run SET agent = type::thing('agent', $agent), \
                  benchmark = type::thing('benchmark', $bench), \
+                 hardware = $hardware, dsl = $dsl, \
                  status = 'scored', trials = $trials, scores = $scores \
                  RETURN record::id(id) AS id",
             )
             .bind(("agent", req.agent_id.clone()))
             .bind(("bench", req.benchmark_id.clone()))
+            .bind(("hardware", req.hardware.clone()))
+            .bind(("dsl", req.dsl.clone()))
             .bind(("trials", req.trials))
             .bind(("scores", scores_json))
             .await?
@@ -241,31 +250,44 @@ impl Store {
             id,
             agent_id: req.agent_id,
             benchmark_id: req.benchmark_id,
+            hardware: req.hardware,
+            dsl: req.dsl,
             status: "scored".into(),
             trials: req.trials,
             scores,
         })
     }
 
-    /// Leaderboard for a benchmark: agents ranked by composite CLEAR score,
-    /// with per-agent improvement areas. Uses SurrealQL aggregation to pick each
-    /// agent's best run, then ranks in Rust.
-    pub async fn leaderboard(&self, tenant: &str, benchmark_id: &str) -> AppResult<Vec<LeaderboardEntry>> {
+    /// Leaderboard for a benchmark, optionally sliced by hardware backend.
+    ///
+    /// Rankings are hardware-specific: an agent that wins on GPU may lose on NPU,
+    /// so a leaderboard is only meaningful within one hardware target (pass
+    /// `hardware = Some("gpu-a100")`); `None` ranks across all hardware.
+    pub async fn leaderboard(
+        &self,
+        tenant: &str,
+        benchmark_id: &str,
+        hardware: Option<&str>,
+    ) -> AppResult<Vec<LeaderboardEntry>> {
         let _g = self.lock.lock().await;
         self.enter_tenant(tenant).await?;
 
-        // Join runs to their agent, newest best run per agent.
-        let rows: Vec<serde_json::Value> = self
-            .client
-            .query(
-                "SELECT agent.name AS agent_name, agent.scaffold AS scaffold, \
-                 record::id(agent) AS agent_id, scores \
-                 FROM run \
-                 WHERE benchmark.benchmark_id = $bid AND status = 'scored'",
-            )
-            .bind(("bid", benchmark_id.to_string()))
-            .await?
-            .take(0)?;
+        let hw_filter = if hardware.is_some() {
+            " AND hardware = $hw"
+        } else {
+            ""
+        };
+        let sql = format!(
+            "SELECT agent.name AS agent_name, agent.scaffold AS scaffold, \
+             record::id(agent) AS agent_id, hardware, dsl, scores \
+             FROM run \
+             WHERE benchmark.benchmark_id = $bid AND status = 'scored'{hw_filter}"
+        );
+        let mut q = self.client.query(sql).bind(("bid", benchmark_id.to_string()));
+        if let Some(hw) = hardware {
+            q = q.bind(("hw", hw.to_string()));
+        }
+        let rows: Vec<serde_json::Value> = q.await?.take(0)?;
 
         let mut entries: Vec<LeaderboardEntry> = rows
             .into_iter()
@@ -290,9 +312,13 @@ impl Store {
                         .and_then(|s| s.as_str())
                         .unwrap_or("")
                         .to_string(),
+                    hardware: v.get("hardware").and_then(|s| s.as_str()).unwrap_or("").to_string(),
+                    dsl: v.get("dsl").and_then(|s| s.as_str()).unwrap_or("").to_string(),
                     efficacy: run_scores.clear.efficacy,
                     cna: run_scores.clear.cna,
                     clear_composite: run_scores.clear_composite,
+                    speedup_geomean: run_scores.perf.speedup_geomean,
+                    correctness: run_scores.perf.correctness,
                     improvement_areas: improvement_areas(&run_scores, 0.7),
                 }
             })

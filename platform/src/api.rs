@@ -1,6 +1,8 @@
 //! HTTP API: multi-tenant agent submission, run scoring, and leaderboards.
 
-use axum::extract::{Path, State};
+use std::collections::HashMap;
+
+use axum::extract::{Path, Query, State};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 
@@ -66,6 +68,11 @@ async fn leaderboard(
     State(store): State<Store>,
     tenant: Tenant,
     Path(benchmark_id): Path<String>,
+    Query(params): Query<HashMap<String, String>>,
 ) -> AppResult<Json<Vec<LeaderboardEntry>>> {
-    Ok(Json(store.leaderboard(&tenant.0, &benchmark_id).await?))
+    // Optional ?hardware=gpu-a100 slices the board to one backend.
+    let hardware = params.get("hardware").map(String::as_str);
+    Ok(Json(
+        store.leaderboard(&tenant.0, &benchmark_id, hardware).await?,
+    ))
 }

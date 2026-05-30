@@ -6,12 +6,14 @@
 //! `benchmarks/reference/`.
 
 pub mod clear;
+pub mod perf;
 pub mod progress;
 pub mod ranking;
 
 pub use clear::{
     clear_composite, clear_scores, pass_at_k, ClearScores, ClearWeights, TaskObservation,
 };
+pub use perf::{perf_scores, PerfObservation, PerfScores};
 pub use progress::{
     grounding_accuracy, progress_rate_continuous, progress_rate_subgoal, success_rate,
 };

@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::metrics::clear::ClearScores;
+use crate::metrics::perf::PerfScores;
 
 /// An agent submitted by a tenant for evaluation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -52,6 +53,14 @@ pub struct TaskResult {
     pub policy_violation: bool,
     #[serde(default)]
     pub policy_critical: bool,
+
+    // --- performance benchmarks (multi-kernel / multi-hardware) ---
+    /// Whether the generated artifact was functionally correct.
+    #[serde(default = "default_true")]
+    pub correct: bool,
+    /// Baseline latency (e.g. PyTorch Eager) in ms; 0 = no perf scoring.
+    #[serde(default)]
+    pub baseline_latency_ms: f64,
 }
 
 fn default_true() -> bool {
@@ -63,6 +72,12 @@ fn default_true() -> bool {
 pub struct SubmitRun {
     pub agent_id: String,
     pub benchmark_id: String,
+    /// Hardware backend the run targeted (e.g. "gpu-a100", "npu", "cpu").
+    #[serde(default)]
+    pub hardware: String,
+    /// DSL / kernel language (e.g. "triton", "cuda-c", "tilelang").
+    #[serde(default)]
+    pub dsl: String,
     #[serde(default = "default_one")]
     pub trials: u32,
     pub results: Vec<TaskResult>,
@@ -78,6 +93,8 @@ pub struct Run {
     pub id: String,
     pub agent_id: String,
     pub benchmark_id: String,
+    pub hardware: String,
+    pub dsl: String,
     pub status: String,
     pub trials: u32,
     pub scores: RunScores,
@@ -91,6 +108,9 @@ pub struct RunScores {
     pub progress_rate: f64,
     pub pass_at_k: f64,
     pub clear_composite: f64,
+    /// Performance metrics (correctness, speedup) for kernel/codegen benchmarks.
+    #[serde(default)]
+    pub perf: PerfScores,
 }
 
 /// A leaderboard row for one agent on one benchmark.
@@ -100,9 +120,15 @@ pub struct LeaderboardEntry {
     pub agent_id: String,
     pub agent_name: String,
     pub scaffold: String,
+    /// Hardware backend this entry's run targeted.
+    pub hardware: String,
+    pub dsl: String,
     pub efficacy: f64,
     pub cna: f64,
     pub clear_composite: f64,
+    /// Geometric-mean speedup vs. baseline (kernel/perf benchmarks).
+    pub speedup_geomean: f64,
+    pub correctness: f64,
     /// Improvement areas identified for this agent (lowest-scoring dimensions).
     pub improvement_areas: Vec<String>,
 }
