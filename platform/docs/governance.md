@@ -11,6 +11,11 @@ adopting two purpose-built tools instead of building our own:
 Both reinforce our two principles: **adopt over build**, and **enforcement is
 owned by the runtime, never the application / never the prompt**.
 
+> **Repo boundary:** this material conceptually belongs to **Agent-Auth**
+> (authz) and **Agent-PAM** (privileged access / rings / kill-switch); see
+> `ecosystem.md`. It lives here only while scoping the platform and will move on
+> split. Agent-Bench *consumes* these verdicts as Assurance signals.
+
 ---
 
 ## Why AGT (and why it matches our design)

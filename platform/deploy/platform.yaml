@@ -1,0 +1,67 @@
+# Agent-Bench platform API, connecting to the SurrealDB server.
+#
+# The same binary embeds SurrealDB by default; here we point it at the
+# in-cluster SurrealDB Service via AGENTBENCH_DB_URL, so multiple API replicas
+# share one store. Build/push the image first (see platform/Dockerfile).
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agentbench
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentbench-platform
+  namespace: agentbench
+spec:
+  replicas: 2                       # stateless API; scale freely (state is in SurrealDB)
+  selector:
+    matchLabels: { app: agentbench-platform }
+  template:
+    metadata:
+      labels: { app: agentbench-platform }
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/agennext/agentbench-platform:latest  # build & push your image
+          ports:
+            - { name: http, containerPort: 8080 }
+          env:
+            - name: AGENTBENCH_ADDR
+              value: "0.0.0.0:8080"
+            - name: AGENTBENCH_DB_URL
+              value: "ws://surrealdb.surrealdb:8000"   # <svc>.<namespace>
+            - name: AGENTBENCH_DB_USER
+              valueFrom: { secretKeyRef: { name: surrealdb-auth, key: user } }
+            - name: AGENTBENCH_DB_PASS
+              valueFrom: { secretKeyRef: { name: surrealdb-auth, key: pass } }
+          readinessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          resources:
+            requests: { cpu: "100m", memory: "128Mi" }
+            limits:   { cpu: "1",    memory: "512Mi" }
+---
+# The platform needs the same DB credentials; copy the secret into this namespace
+# (or use a shared secret manager / ExternalSecrets in production).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: surrealdb-auth
+  namespace: agentbench
+type: Opaque
+stringData:
+  user: root
+  pass: "change-me-root-pass"     # keep in sync with the surrealdb namespace
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agentbench-platform
+  namespace: agentbench
+spec:
+  selector: { app: agentbench-platform }
+  ports:
+    - { name: http, port: 80, targetPort: 8080 }

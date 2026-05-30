@@ -14,16 +14,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .init();
 
-    // Storage: SurrealKV on disk when AGENTBENCH_DB_PATH is set, else in-memory.
-    let store = match std::env::var("AGENTBENCH_DB_PATH") {
-        Ok(path) => {
-            tracing::info!(%path, "opening SurrealKV store");
-            Store::surrealkv(&path).await?
-        }
-        Err(_) => {
-            tracing::info!("opening in-memory store (set AGENTBENCH_DB_PATH to persist)");
-            Store::memory().await?
-        }
+    // Storage selection (in priority order):
+    //   AGENTBENCH_DB_URL  — any endpoint: memory | surrealkv://path | ws://host:8000
+    //   AGENTBENCH_DB_PATH — shorthand for surrealkv://<path>
+    //   (neither)          — in-memory
+    // Remote (ws/http) endpoints use AGENTBENCH_DB_USER / AGENTBENCH_DB_PASS.
+    let store = if let Ok(url) = std::env::var("AGENTBENCH_DB_URL") {
+        let user = std::env::var("AGENTBENCH_DB_USER").unwrap_or_else(|_| "root".into());
+        let pass = std::env::var("AGENTBENCH_DB_PASS").unwrap_or_else(|_| "root".into());
+        tracing::info!(%url, "connecting to SurrealDB");
+        Store::connect(&url, Some((&user, &pass))).await?
+    } else if let Ok(path) = std::env::var("AGENTBENCH_DB_PATH") {
+        tracing::info!(%path, "opening SurrealKV store");
+        Store::surrealkv(&path).await?
+    } else {
+        tracing::info!("opening in-memory store (set AGENTBENCH_DB_URL to use a server)");
+        Store::memory().await?
     };
 
     let app = api::router(store);

@@ -1,15 +1,17 @@
-//! Embedded SurrealDB storage with namespace-per-tenant isolation.
+//! SurrealDB storage with namespace-per-tenant isolation.
 //!
 //! Each enterprise tenant maps to its own SurrealDB **namespace** — SurrealDB's
-//! native multi-tenancy primitive — inside a single embedded engine (in-memory
-//! or SurrealKV on disk). Migrations are versioned `.surql` files applied once
-//! per namespace and tracked in a `_migration` table.
+//! native multi-tenancy primitive. The store uses the `any` engine, so the same
+//! binary runs against an **embedded** engine (`memory`, `surrealkv://path`) or
+//! a **remote** server (`ws://host:8000`) selected purely by connection string.
+//! Migrations are versioned `.surql` files applied once per namespace and
+//! tracked in a `_migration` table.
 
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use surrealdb::engine::local::Db as LocalDb;
-use surrealdb::engine::local::{Mem, SurrealKv};
+use surrealdb::engine::any::Any;
+use surrealdb::opt::auth::Root;
 use surrealdb::Surreal;
 use tokio::sync::Mutex;
 
@@ -36,12 +38,12 @@ fn slugify(s: &str) -> String {
         .collect()
 }
 
-/// Handle to the embedded engine. A single `Mutex` serializes the
+/// Handle to the engine. A single `Mutex` serializes the
 /// (switch-namespace → query) critical section so per-tenant access is safe on
 /// the shared connection. (A per-tenant connection pool is the scale-up path.)
 #[derive(Clone)]
 pub struct Store {
-    client: Arc<Surreal<LocalDb>>,
+    client: Arc<Surreal<Any>>,
     lock: Arc<Mutex<()>>,
     migrated: Arc<Mutex<HashSet<String>>>,
 }
@@ -49,22 +51,36 @@ pub struct Store {
 impl Store {
     /// Open an in-memory engine (ephemeral; ideal for tests and dev).
     pub async fn memory() -> AppResult<Self> {
-        let client = Surreal::new::<Mem>(()).await?;
-        Ok(Self::wrap(client))
+        Self::connect("memory", None).await
     }
 
     /// Open a persistent SurrealKV engine at `path`.
     pub async fn surrealkv(path: &str) -> AppResult<Self> {
-        let client = Surreal::new::<SurrealKv>(path).await?;
-        Ok(Self::wrap(client))
+        Self::connect(&format!("surrealkv://{path}"), None).await
     }
 
-    fn wrap(client: Surreal<LocalDb>) -> Self {
-        Self {
+    /// Connect to any SurrealDB endpoint (embedded or remote).
+    ///
+    /// * `memory`                  — embedded, ephemeral
+    /// * `surrealkv://./data`      — embedded, persistent
+    /// * `ws://surrealdb:8000`     — remote server (k8s), requires `creds`
+    ///
+    /// For remote endpoints, `creds` must be `Some((user, pass))` to sign in as
+    /// root; embedded engines ignore credentials.
+    pub async fn connect(endpoint: &str, creds: Option<(&str, &str)>) -> AppResult<Self> {
+        let client = surrealdb::engine::any::connect(endpoint).await?;
+
+        let remote = endpoint.starts_with("ws") || endpoint.starts_with("http");
+        if remote {
+            if let Some((username, password)) = creds {
+                client.signin(Root { username, password }).await?;
+            }
+        }
+        Ok(Self {
             client: Arc::new(client),
             lock: Arc::new(Mutex::new(())),
             migrated: Arc::new(Mutex::new(HashSet::new())),
-        }
+        })
     }
 
     /// Switch the connection to a tenant namespace, applying migrations on first

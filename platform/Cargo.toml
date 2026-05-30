@@ -20,7 +20,8 @@ async-trait = { version = "0.1", optional = true }
 tracing = { version = "0.1", optional = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
 # SurrealDB embedded ("native"): in-memory + SurrealKV storage engines.
-surrealdb = { version = "2", default-features = false, features = ["kv-mem", "kv-surrealkv"], optional = true }
+# `kv-mem` + `kv-surrealkv` = embedded engines; `protocol-ws` = remote server (k8s).
+surrealdb = { version = "2", default-features = false, features = ["kv-mem", "kv-surrealkv", "protocol-ws"], optional = true }
 
 [features]
 # Default build is the pure-Rust scoring core: fast to compile, fully unit-tested.

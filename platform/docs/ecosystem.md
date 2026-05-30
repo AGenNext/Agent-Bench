@@ -1,0 +1,39 @@
+# AGenNext Ecosystem & Repo Boundaries
+
+Agent-Bench is one repo in a larger system. **Agent-Bench owns benchmarking and
+performance evaluation only.** Identity, auth, and governance have dedicated
+repos and must not be reimplemented here.
+
+| Repo | Owns | This platform's relationship |
+|---|---|---|
+| **Agent-Bench** (here) | Reproducible benchmark suites, eval runs, scoring engine (CLEAR / rank fidelity / progress rate), leaderboards, result packages | — |
+| **[Agent-Auth](https://github.com/AGenNext/Agent-Auth)** | Authentication & authorization plane — identity provider (casdoor), tokens, OpenFGA fine-grained authz | Platform validates tokens & delegates authz decisions here |
+| **[Agent-IGA](https://github.com/AGenNext/Agent-IGA)** | Identity Governance & Administration — agent/user lifecycle, entitlements, access reviews, zero-trust policy | Platform consumes governance verdicts; enforcement owned upstream |
+| **[Agent-PAM](https://github.com/AGenNext/Agent-PAM)** | Privileged Access Management — agent privilege rings, just-in-time elevation, session brokering, kill-switch | Agents-under-test run under PAM-granted privilege; platform records what PAM allowed/killed |
+| **[Agent-LCM](https://github.com/AGenNext/Agent-LCM)** | Agent Lifecycle Management — versioning, promotion, rollout, retirement | **Consumes Agent-Bench rankings**: eval results gate promotion/retirement |
+| **[Agent-Memory](https://github.com/AGenNext/Agent-Memory)** | Agent memory layer (recall, conflict, decay) | Benchmarked by the AMB-001 suite |
+| **Agent-Eval** | Reusable scoring functions, rubrics, CLEAR components | Agent-Bench calls these for scoring |
+
+## Boundary rule
+
+> Enforcement is owned by the runtime and by the auth/IGA plane — **never** by
+> Agent-Bench. This platform *declares intent*, *validates tokens*, and *reads
+> decisions*. It does not run an IdP, a policy engine, or an authz service.
+
+## Docs that belong elsewhere (to migrate)
+
+These were drafted here while scoping the platform but conceptually belong to
+**Agent-Auth / Agent-IGA**. They are kept for now and should move when we split:
+
+- `governance.md` — AGT + OpenFGA → **Agent-Auth**
+- `zero-trust.md` — AuthZEN PEP/PDP, zero-trust posture → **Agent-Auth / Agent-IGA**
+- `security-owasp.md` — Part 1 (platform defense) stays; Part 2 (agent threat
+  battery) feeds the **Assurance** benchmark category and stays in Agent-Bench
+- `cncf-stack.md` — infra runtime; the auth/identity rows reference Agent-Auth
+
+## What stays in Agent-Bench, always
+
+- The **scoring engine** (`src/metrics`, `src/scoring`) — the heart of the repo.
+- Benchmark **contracts**, **suites**, and **result packages**.
+- The **leaderboard** and **improvement-area** surfacing.
+- The thin **token-validation + AuthZEN PEP adapter** that talks to Agent-Auth.
