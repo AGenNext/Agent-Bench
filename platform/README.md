@@ -1,105 +1,19 @@
 # Agent-Bench Platform
 
-A cloud-native, **multi-tenant** platform that **measures, publishes, and
-certifies** entities against **any protocol** — SWE-bench-style benchmarking as a
-service.
+A multi-tenant platform that **measures, publishes, and certifies** agents
+against a supplied protocol — SWE-bench-style benchmarking as a service.
 
 ## It answers exactly two questions
 
-1. **How good is this agent?** — measured against a supplied `protocol@version`,
-   published as a verifiable, certified result.
-2. **What should it do next to reach the next level?** — the improvement areas
-   that close the gap.
+1. **How good is this agent?** — measured against a supplied `protocol@version`.
+2. **What should it do next to reach the next level?** — the improvement areas.
 
-Nothing more. Rank + remedy, certified.
+Agent-Bench does **not** define protocols. It measures against the protocol you
+bring (e.g. AMB-001 for the memory attribute), per agent attribute, and reports
+a rank plus improvement areas.
 
-## Agent-Bench does *not* define protocols
-
-It is **protocol-agnostic infrastructure**. Protocols — the security,
-governance, and excellence bars — come from elsewhere (research, standards
-bodies, domains, regulators). Agent-Bench is the neutral instrument that:
-
-- **measures** an entity against the protocol you bring (BYO-protocol),
-- **publishes** the result as a versioned, content-addressed package, and
-- **certifies** conformance — issuing the verifiable attestation.
-
-The protocol is the *input*; measurement + publication + certification is the
-*service*. We don't own the bar; we tell you, verifiably, where you stand against
-it and how to rise.
-
-Built natively on **SurrealDB** (embedded), **Axum**, and a pure-Rust scoring
-engine derived from the [reference library](../benchmarks/reference/).
-
-## Positioning — we bring the *model*, not the infra
-
-> Hugging Face has the infra; we bring the model.
-
-The infrastructure is **adopted, not rebuilt**, and **enforcement is owned by the
-runtime**:
-
-| Layer | Owned by (adopted) |
-|---|---|
-| Kernel / model hosting & registry | **Hugging Face** (Kernels Hub, model hosting) |
-| Control plane / runtime | **AgentField** + the **CNCF stack** (k8s, Kata, Cilium, Argo, …) |
-| **Policy & access enforcement** | **SurrealDB enforces** at the data layer — verifies Agent-Auth JWTs, applies record-level `PERMISSIONS` (see [docs/surrealdb-security.md](docs/surrealdb-security.md)). The app never enforces. |
-| **Telemetry & measurement** | **ClickHouse** — high-volume run/step metrics, time-series, leaderboard analytics, drift signals (the *measurement* store; SurrealDB stays the transactional + enforcement store) |
-| Identity / authz / governance | **Agent-Auth / IGA / PAM / Guard** (see [docs/ecosystem.md](docs/ecosystem.md)) |
-
-What **Agent-Bench brings is the evaluation *model***: the scoring engine
-(CLEAR · rank-fidelity · progress · perf/speedup), mid-range task selection,
-benchmark contracts, and the ranked leaderboard with improvement areas. That —
-not infrastructure — is the value we add on top.
-
-### Cloud-native by construction
-
-Staying cloud-native is a constraint, not an afterthought — it falls out of the
-choices above:
-
-- **Stateless, horizontally scalable** API; all state in SurrealDB → scale
-  replicas freely (12-factor).
-- **Adopt, don't build** — orchestration, sandboxing, autoscaling, policy,
-  identity, observability, cost are CNCF/HF projects ([cncf-stack.md](docs/cncf-stack.md)).
-- **Enforcement owned by the runtime** — SurrealDB (data), Cilium/Kata/OPA
-  (infra), never the app.
-- **Declarative everything** — Terraform (infra graph) → Helm (app graph) →
-  `EvaluationPolicy` CRD, GitOps-synced ([declarative-stack.md](docs/declarative-stack.md)).
-- **Reconciled, not scripted** — a Kubernetes-style loop converges to desired
-  eval state ([reconciliation.md](docs/reconciliation.md)).
-- **Two-store separation** — SurrealDB (transactional + enforcement) vs.
-  ClickHouse (telemetry/measurement) ([telemetry.md](docs/telemetry.md)).
-- **Observable & identity-aware from day one** — OpenTelemetry, W3C DIDs,
-  per-record audit.
-
-The platform behaves like infrastructure (a service you call), not a library you
-import — exactly AgentField's model.
-
-### The registry is the bearer of trust
-
-**Everything is a registry artifact.** Via OCI/ORAS, the registry holds not just
-container images and kernels but **agents, models, benchmark suites, scenario
-fixtures, result packages, reproducibility manifests, and the `EvaluationPolicy`
-itself** — every artifact content-addressed (by digest), versioned, and signed.
-The benchmark contract's *result package* is literally an OCI artifact you pull
-by digest, which is what makes a run reproducible.
-
-Trust is then anchored in the **registry** (Harbor for images, HF Kernels Hub for
-kernels, the agent/model registry) — not in the app, the network, or a prompt:
-
-- **Signed + attested** — artifacts are signed (Sigstore/cosign) with SLSA
-  provenance; nothing runs unless its signature verifies against the registry.
-- **Benchmark scores become attestations** — Agent-Bench publishes a signed
-  **result-package attestation** (score, hardware/DSL coordinates, reproducibility
-  manifest) *to the registry*, bound to the artifact's digest. A score is then a
-  verifiable claim, not a number in a database.
-- **Gates verify against the registry** — admission (OPA/Gatekeeper) and
-  promotion (Agent-LCM) check the registry-anchored signature + a fresh passing
-  attestation before anything ships ([reconciliation.md](docs/reconciliation.md)).
-- **Trust flows outward** — Agent-Trust and Agent-Compliance consume these
-  registry attestations as evidence; the registry is the root they chain to.
-
-So the chain of custody is: *signed artifact in the registry → benchmarked →
-signed result attestation back in the registry → gates verify → promote.* The
-registry carries the trust end to end.
+Built on **SurrealDB** (embedded or remote via the `any` engine), **Axum**, and a
+pure-Rust scoring engine derived from the [reference library](../benchmarks/reference/).
 
 ## Architecture
 
@@ -111,24 +25,24 @@ registry carries the trust end to end.
                  └───────────────┬─────────────────────────────┘
                                  │
               ┌──────────────────▼───────────────────┐
-              │  Scoring engine (src/metrics, scoring)│  ← pure Rust, no I/O
-              │   CLEAR · rank fidelity · progress    │     fully unit-tested
+              │  Scoring engine (src/metrics,         │  ← pure Rust, no I/O
+              │   src/scoring, src/attributes)        │     fully unit-tested
               └──────────────────┬───────────────────┘
                                  │
               ┌──────────────────▼───────────────────┐
               │  Store (src/db.rs)                    │
-              │   embedded SurrealDB                  │
+              │   SurrealDB (any engine)              │
               │   namespace-per-tenant + migrations   │
               └───────────────────────────────────────┘
 ```
 
 ### Multi-tenancy
-Each enterprise tenant maps to its own **SurrealDB namespace** (native
-isolation). The `X-Tenant` request header selects the namespace; migrations
-under `migrations/*.surql` are applied once per namespace and tracked in a
-`_migration` table (SurrealDB schema-migration-library pattern).
+Each tenant maps to its own **SurrealDB namespace** (native isolation). The
+`X-Tenant` request header selects the namespace; migrations under
+`migrations/*.surql` are applied once per namespace and tracked in a
+`_migration` table.
 
-### Scoring engine (`src/metrics/`)
+### Scoring engine (`src/metrics/`, `src/attributes/`)
 Pure Rust, no DB — reusable by the API, a CLI, or offline analysis. Each module
 maps to a reference doc:
 
@@ -137,13 +51,25 @@ maps to a reference doc:
 | `metrics/clear.rs` | CNA, CPS, SCR, PAS, pass@k, composite | `clear-enterprise-evaluation.md` |
 | `metrics/ranking.rs` | Spearman ρ, Kendall τ, Mid-Range Difficulty Filter | `efficient-benchmarking-ai-agents.md` |
 | `metrics/progress.rs` | progress rate, success rate, grounding accuracy | `agentboard.md` |
+| `metrics/perf.rs` | correctness, geomean speedup, `fast_p` (multi-hardware) | `akg-kernel-agent.md` |
 | `scoring.rs` | run aggregation + improvement-area detection | (bridges the above) |
+| `attributes/memory.rs` | per-attribute memory eval + comparative ranking | AMB-001 |
+
+### Multi-kernel / multi-hardware
+Runs carry `hardware` and `dsl`; `metrics/perf.rs` scores speedup vs. a baseline.
+Leaderboards are sliceable per hardware backend (`?hardware=gpu-a100`), because
+an agent that wins on GPU may lose on NPU.
+
+### Attributes
+Agents are evaluated one attribute at a time. **Memory** is implemented
+(`src/attributes/memory.rs`), scored against AMB-001, with a comparative
+evaluator that ranks frameworks (Agent-Memory vs Mem0/Zep/Letta) and reports each
+framework's gap-to-leader.
 
 ### Improvement areas & SurrealML
-`improvement_areas()` flags an agent's weakest CLEAR dimensions. With the
-`surrealml` feature, `src/ml.rs` calls a SurrealML model (`ml::*` SurrealQL
-functions) to predict deployment-readiness natively in the database; otherwise
-it falls back to the deterministic composite.
+`improvement_areas()` flags an agent's weakest dimensions. With the `surrealml`
+feature, `src/ml.rs` calls a SurrealML model (`ml::*` SurrealQL functions) for
+readiness prediction; otherwise it falls back to the deterministic composite.
 
 ## Build & run
 
@@ -153,8 +79,9 @@ cargo test
 
 # Full multi-tenant server (embedded SurrealDB + Axum):
 cargo test --features server
-cargo run  --features server          # in-memory store on :8080
+cargo run  --features server                       # in-memory store on :8080
 AGENTBENCH_DB_PATH=./data cargo run --features server   # persistent SurrealKV
+AGENTBENCH_DB_URL=ws://surrealdb:8000 cargo run --features server  # remote server
 
 # With native ML inference:
 cargo run --features surrealml
@@ -169,8 +96,8 @@ cargo run --features surrealml
 | `GET`  | `/v1/agents` | list tenant's agents |
 | `POST` | `/v1/benchmarks` | upsert a benchmark suite |
 | `GET`  | `/v1/benchmarks` | list benchmarks |
-| `POST` | `/v1/runs` | submit a run (`{agent_id, benchmark_id, trials, results[]}`) → scored |
-| `GET`  | `/v1/leaderboard/:benchmark_id` | ranked agents + improvement areas |
+| `POST` | `/v1/runs` | submit a run (`{agent_id, benchmark_id, hardware, dsl, trials, results[]}`) → scored |
+| `GET`  | `/v1/leaderboard/:benchmark_id[?hardware=…]` | ranked agents + improvement areas |
 
 All endpoints require the `X-Tenant: <enterprise>` header.
 
@@ -186,17 +113,10 @@ curl -s localhost:8080/v1/runs -H 'X-Tenant: acme' \
   -d '{"agent_id":"strong_1","benchmark_id":"swe-lite","trials":1,
        "results":[{"task_id":"t1","success":1.0,"cost_usd":0.2}]}'
 
-curl -s localhost:8080/v1/leaderboard/swe-lite -H 'X-Tenant: acme'
+curl -s 'localhost:8080/v1/leaderboard/swe-lite?hardware=gpu-a100' -H 'X-Tenant: acme'
 ```
 
-## Roadmap (SurrealDB-native capabilities)
+## Deployment
 
-- **Time-series telemetry** — store every run as a time-series record for
-  per-agent trend tracking and drift monitoring (temporal leaderboard).
-- **Aggregation queries** — leaderboard aggregation pushed fully into SurrealQL
-  (`GROUP BY`, `math::*`) for best-run-per-agent at scale.
-- **Vector search / RAG** — embed improvement-area explanations and retrieve
-  remediation guidance from the reference library.
-- **Mid-range task selection** — use historical pass rates to auto-select the
-  30–70% band per benchmark, cutting evaluation cost 44–70%.
-- **Observability** — OpenTelemetry tracing across API + DB.
+See [`deploy/`](deploy/) for Kubernetes manifests (SurrealDB + the stateless API)
+and the `Dockerfile`.

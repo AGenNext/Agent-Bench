@@ -21,4 +21,26 @@
 //! (GPA, SLA, EVAL, …) are grounded in the reference library and owned in their
 //! respective repos.
 
+//! ## Attribute roadmap
+//!
+//! Memory is the first attribute. Others are **already defined** elsewhere
+//! (runtime, tools, rules, skills — e.g. the Agent-Kernel Action/Controller
+//! modules and the registry's tool/skill definitions), so each plugs in here the
+//! same way: a `score()` over the defined spec + an `evaluate()` against the
+//! supplied protocol thresholds, answering the same two questions.
+//!
+//! | Attribute | Status | Measured against (defined elsewhere) |
+//! |-----------|--------|--------------------------------------|
+//! | **memory**  | implemented | AMB-001 protocol |
+//! | runtime   | planned | runtime behavior spec |
+//! | tools     | planned | tool definitions (registry) — tool-call accuracy, selection |
+//! | rules     | planned | rule/policy definitions — conformance (Controller-style) |
+//! | skills    | planned | skill definitions (registry graph) |
+//!
+//! Agent-Bench measures against these defined specs; it does not author them.
+//!
+//! Attributes and their thresholds are versioned: each evaluation records the
+//! protocol version it measured against (e.g. `AMB-001`), so results stay
+//! comparable as metrics are refined over time.
+
 pub mod memory;
