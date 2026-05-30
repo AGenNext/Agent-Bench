@@ -130,6 +130,26 @@ This is why the `Store` abstraction matters: the same code path that today reads
 *data* from SurrealDB later reads *grammar* from SurrealDB and *data* from
 ArangoDB/ClickHouse — the transition is adapters + config, not a rewrite.
 
+### The coupling breaks — separate data, language, enforcement
+
+Today SurrealDB conflates **three concerns in one engine**: **data + language
+(grammar) + enforcement**. That bundling is fine for the light start, but **it
+breaks at the end** — you cannot scale data, evolve the grammar, and harden
+enforcement independently when they share one store. The end state **decouples**
+them, each to its own home:
+
+| Concern | Today (coupled in SurrealDB) | End state (decoupled) |
+|---|---|---|
+| **Data** | SurrealDB records | **ArangoDB → data lake** (assets), **ClickHouse** (analytics), **registry** (artifacts by digest) |
+| **Language / grammar** | SurrealQL `DEFINE` schema | **declarative grammar authority** — the typed, versioned vocabulary (still SurrealQL `DEFINE`, but now *only* this) |
+| **Enforcement** | SurrealDB record `PERMISSIONS` | **runtime PEP** — Agent-Auth/OPA/AuthZEN + data-layer permissions; verdicts observed, not hard-coded in one DB |
+
+So the single store splits into: **data tiers** (purpose-built), a **declarative
+grammar layer**, and a **runtime enforcement plane**. Keeping all three in
+SurrealDB forever is the thing that breaks; pulling them apart on the known growth
+path is what keeps the system cloud-native and scalable. The `Store` abstraction
+is the seam along which this separation happens.
+
 ### The grammar is itself declarative
 
 And the grammar layer fits the all-declarative end with **no exception**: a
