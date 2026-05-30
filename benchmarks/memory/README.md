@@ -3,6 +3,20 @@
 Reproducible benchmark suites comparing agent memory frameworks on tasks
 that matter in production.
 
+## Why: there is no tangible way to compare memory
+
+Memory-framework claims are anecdotal — there is **no tangible, reproducible way
+to compare** Agent-Memory against Mem0, Zep, or Letta. AMB-001 makes it concrete:
+the *same* conversations, the *same* queries, the *same* recognized **agent
+performance metrics** (Agent EVAL: recall/gap/conflict · Agent SLA: cold-start +
+p50/p99 latency · Agent GPA: the composite grade), the *same* pass thresholds —
+ranked, with a per-metric leader and, for each framework, the gap-to-leader (its
+path to the next level).
+
+The evaluator lives at `platform/src/attributes/memory.rs` and answers
+Agent-Bench's only two questions for the memory attribute:
+**how good is this agent's memory**, and **what should it do next**.
+
 ## AMB-001 — Recall & Conflict Resolution
 
 **Status:** Fixture development in progress. First run scheduled after

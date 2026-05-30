@@ -6,6 +6,7 @@
 //! * the server layer (`db`, `api`, `tenancy`, `ml`) — multi-tenant Axum API
 //!   over embedded SurrealDB, behind the `server` feature.
 
+pub mod attributes;
 pub mod domain;
 pub mod metrics;
 pub mod scoring;
