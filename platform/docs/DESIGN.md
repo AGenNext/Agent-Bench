@@ -17,9 +17,18 @@ paths) or is a declared schema. No philosophy — just the design.
 | **Concept** | A platform that **measures, publishes, and certifies** an agent against a supplied protocol. |
 | **What it means** | A neutral instrument. It does **not** define protocols, metrics, or thresholds — those are inputs. |
 | **Provides (answers)** | Exactly two questions: **(1) how good is this agent?** and **(2) what should it do next to reach the next level?** |
-| **Input** | An agent (or framework) + per-task results for one **attribute**. |
+| **Input** | A **subject** + per-task/query results for one **attribute**. The subject is anything in the registries — not only a whole agent. |
 | **Protocol** | Any supplied `protocol@version` (metric set + thresholds). Memory ships against **AMB-001**. |
 | **Output** | A scored result (rank/grade) + improvement areas — published as a result package. |
+
+> **Subjects under evaluation** come from two registries (owned in their
+> respective repos):
+> - **Artifact registry** — skill, prompt, model, template, uikit, …
+> - **Image registry** — agents, APIs, apps, SaaS, runtimes, …
+>
+> Agent-Bench treats any of these as a subject to measure against a supplied
+> protocol, answering the same two questions. The **Memory** attribute is the
+> first implemented.
 
 ## Component map
 
