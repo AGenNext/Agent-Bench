@@ -29,6 +29,12 @@ paths) or is a declared schema. No philosophy — just the design.
 > Agent-Bench treats any of these as a subject to measure against a supplied
 > protocol, answering the same two questions. The **Memory** attribute is the
 > first implemented.
+>
+> Each registry entry has an **identity** (DID) and a **card** (its metadata
+> descriptor — model-card / agent-card style). Agent-Bench **binds every result
+> to the subject's identity**, and the certified scores **feed the card**. The
+> identity + card schema is owned by the registry; Agent-Bench references the
+> identity and contributes evaluation results to the card.
 
 ## Component map
 
