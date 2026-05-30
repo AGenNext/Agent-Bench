@@ -135,6 +135,47 @@ grammar, semantics, schema, and conformance tests once per version, and
 verification against that version becomes the enforcement, executed by whoever is
 consuming.
 
+### Protocols carry security, governance — and excellence
+
+A protocol version is not only a *semantic* contract. It bundles
+conformance-checkable requirements across **three dimensions**, all enforced the
+same way (verify conformance to the declared version):
+
+| Dimension | What the protocol pins | Owned by | Conformance check |
+|---|---|---|---|
+| **Security** | threat resistance, prompt-injection/jailbreak bars, safe-output rules | Agent-Threat / Agent-Guard | adversarial conformance suite (OWASP-LLM) |
+| **Governance** | policy, access, identity, compliance (EU AI Act, NIST, SOC 2) | Agent-Auth / IGA / Compliance | policy + attestation conformance |
+| **Excellence** | quality & performance bars — pass thresholds, CLEAR mins, speedup floors | **Agent-Bench** | benchmark conformance (the scoring suite) |
+
+So "the protocol enforces" means all three at once: an artifact that declares
+`protocol@v` is verifiably **secure, governed, *and* excellent** — or it fails
+conformance. **Agent-Bench is the steward of the *excellence* protocols**: the
+benchmark thresholds, metric definitions, and result-package schema that define
+what "good enough" means, machine-checkably, federation-wide. Security and
+governance protocols come from their planes; excellence is ours — and they
+compose into one versioned protocol whose conformance is the gate.
+
+#### Protocols are best practices, not just restrictions
+
+Crucially, protocols are **not merely restrictive** — they are **codified best
+practices**. They are *constructive*: they tell you how to do the right thing,
+not just what's forbidden. Two faces of the same protocol:
+
+- **Enabling (the default reading).** A protocol is the distilled, research- and
+  theory-grounded best practice for security, governance, and excellence — adopt
+  it and you inherit the field's hard-won knowledge. Conformance = "you are doing
+  it the proven-good way."
+- **Guiding when unmet.** A failed conformance check is not just a rejection; it
+  is **diagnostic** — it names the gap. This is exactly Agent-Bench's
+  **improvement areas**: the protocol shows you *how to get better*, turning a
+  gate into guidance.
+
+So enforcement and excellence are the same coin: the protocol pulls quality *up*
+(best practice to aspire to and adopt), and only incidentally filters *out* what
+falls short. We optimize for elevation, not prohibition — a permissionless
+federation grows by **raising the floor with shared best practice**, not by
+gatekeeping.
+
 ### Research, theory, test — the precursors to enforcement
 
 Nothing becomes enforcement directly. A capability matures through **precursor
