@@ -28,6 +28,57 @@ What **Agent-Bench brings is the evaluation *model***: the scoring engine
 benchmark contracts, and the ranked leaderboard with improvement areas. That —
 not infrastructure — is the value we add on top.
 
+### Cloud-native by construction
+
+Staying cloud-native is a constraint, not an afterthought — it falls out of the
+choices above:
+
+- **Stateless, horizontally scalable** API; all state in SurrealDB → scale
+  replicas freely (12-factor).
+- **Adopt, don't build** — orchestration, sandboxing, autoscaling, policy,
+  identity, observability, cost are CNCF/HF projects ([cncf-stack.md](docs/cncf-stack.md)).
+- **Enforcement owned by the runtime** — SurrealDB (data), Cilium/Kata/OPA
+  (infra), never the app.
+- **Declarative everything** — Terraform (infra graph) → Helm (app graph) →
+  `EvaluationPolicy` CRD, GitOps-synced ([declarative-stack.md](docs/declarative-stack.md)).
+- **Reconciled, not scripted** — a Kubernetes-style loop converges to desired
+  eval state ([reconciliation.md](docs/reconciliation.md)).
+- **Two-store separation** — SurrealDB (transactional + enforcement) vs.
+  ClickHouse (telemetry/measurement) ([telemetry.md](docs/telemetry.md)).
+- **Observable & identity-aware from day one** — OpenTelemetry, W3C DIDs,
+  per-record audit.
+
+The platform behaves like infrastructure (a service you call), not a library you
+import — exactly AgentField's model.
+
+### The registry is the bearer of trust
+
+**Everything is a registry artifact.** Via OCI/ORAS, the registry holds not just
+container images and kernels but **agents, models, benchmark suites, scenario
+fixtures, result packages, reproducibility manifests, and the `EvaluationPolicy`
+itself** — every artifact content-addressed (by digest), versioned, and signed.
+The benchmark contract's *result package* is literally an OCI artifact you pull
+by digest, which is what makes a run reproducible.
+
+Trust is then anchored in the **registry** (Harbor for images, HF Kernels Hub for
+kernels, the agent/model registry) — not in the app, the network, or a prompt:
+
+- **Signed + attested** — artifacts are signed (Sigstore/cosign) with SLSA
+  provenance; nothing runs unless its signature verifies against the registry.
+- **Benchmark scores become attestations** — Agent-Bench publishes a signed
+  **result-package attestation** (score, hardware/DSL coordinates, reproducibility
+  manifest) *to the registry*, bound to the artifact's digest. A score is then a
+  verifiable claim, not a number in a database.
+- **Gates verify against the registry** — admission (OPA/Gatekeeper) and
+  promotion (Agent-LCM) check the registry-anchored signature + a fresh passing
+  attestation before anything ships ([reconciliation.md](docs/reconciliation.md)).
+- **Trust flows outward** — Agent-Trust and Agent-Compliance consume these
+  registry attestations as evidence; the registry is the root they chain to.
+
+So the chain of custody is: *signed artifact in the registry → benchmarked →
+signed result attestation back in the registry → gates verify → promote.* The
+registry carries the trust end to end.
+
 ## Architecture
 
 ```
