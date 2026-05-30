@@ -8,6 +8,8 @@ use surrealdb::engine::any::connect;
 
 const SCHEMA_METRICS: &str = include_str!("../schema/metrics.surql");
 const SCHEMA_MEMORY: &str = include_str!("../schema/memory_attribute.surql");
+const SCHEMA_PAGES: &str = include_str!("../schema/pages.surql");
+const LOGIC_REFERENCE_MD: &str = include_str!("../schema/pages/agent-bench-logic-reference.md");
 
 async fn fresh() -> surrealdb::Surreal<surrealdb::engine::any::Any> {
     let db = connect("memory").await.expect("embedded surreal");
@@ -53,6 +55,44 @@ async fn metric_functions_compute_correctly() {
         .query("RETURN fn::progress_continuous([0.0, 0.25, 0.1, 0.5])")
         .await.unwrap().take(0).unwrap();
     assert!((pr.unwrap() - 0.5).abs() < 1e-9);
+}
+
+#[tokio::test]
+async fn logic_reference_page_stored_and_served_from_surrealdb() {
+    let db = fresh().await;
+    db.query(SCHEMA_PAGES).await.unwrap().check().unwrap();
+
+    // Store the page document in SurrealDB (multimodel).
+    db.query(
+        "UPSERT type::thing('page', $slug) SET slug = $slug, title = $title, \
+         format = $format, content = $content",
+    )
+    .bind(("slug", "agent-bench-logic-reference"))
+    .bind(("title", "Agent-Bench — Logic Reference"))
+    .bind(("format", "markdown"))
+    .bind(("content", LOGIC_REFERENCE_MD))
+    .await
+    .unwrap()
+    .check()
+    .unwrap();
+
+    // Served back by the same query the SurrealDB HTTP API would run.
+    let title: Option<String> = db
+        .query("SELECT VALUE title FROM page WHERE slug = $slug")
+        .bind(("slug", "agent-bench-logic-reference"))
+        .await
+        .unwrap()
+        .take(0)
+        .unwrap();
+    assert_eq!(title.as_deref(), Some("Agent-Bench — Logic Reference"));
+
+    let content: Option<String> = db
+        .query("SELECT VALUE content FROM page:`agent-bench-logic-reference`")
+        .await
+        .unwrap()
+        .take(0)
+        .unwrap();
+    assert!(content.unwrap().contains("How good is this agent"));
 }
 
 #[tokio::test]
