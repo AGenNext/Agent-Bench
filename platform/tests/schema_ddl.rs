@@ -10,6 +10,7 @@ const SCHEMA_METRICS: &str = include_str!("../schema/metrics.surql");
 const SCHEMA_MEMORY: &str = include_str!("../schema/memory_attribute.surql");
 const SCHEMA_PAGES: &str = include_str!("../schema/pages.surql");
 const LOGIC_REFERENCE_MD: &str = include_str!("../schema/pages/agent-bench-logic-reference.md");
+const SCHEMA_SEARCH_GRAPH: &str = include_str!("../schema/search_graph.surql");
 
 async fn fresh() -> surrealdb::Surreal<surrealdb::engine::any::Any> {
     let db = connect("memory").await.expect("embedded surreal");
@@ -93,6 +94,45 @@ async fn logic_reference_page_stored_and_served_from_surrealdb() {
         .take(0)
         .unwrap();
     assert!(content.unwrap().contains("How good is this agent"));
+}
+
+#[tokio::test]
+async fn full_context_then_narrow_and_traverse() {
+    let db = fresh().await;
+    db.query(SCHEMA_PAGES).await.unwrap().check().unwrap();
+    db.query(SCHEMA_MEMORY).await.unwrap().check().unwrap();
+    db.query(SCHEMA_SEARCH_GRAPH).await.unwrap().check().unwrap();
+
+    // Full context: store the page document.
+    db.query("CREATE page:doc SET slug='doc', title='Doc', format='markdown', content=$c")
+        .bind(("c", LOGIC_REFERENCE_MD))
+        .await.unwrap().check().unwrap();
+
+    // Contract: full-text search narrows the full context down.
+    let hits: Vec<String> = db
+        .query("SELECT VALUE slug FROM page WHERE content @@ 'how good'")
+        .await.unwrap().take(0).unwrap();
+    assert!(hits.contains(&"doc".to_string()), "full-text narrows: {hits:?}");
+
+    // Build the graph within the site: subject -> card_eval -> attribute.
+    db.query(
+        "CREATE subject:s SET did = 'did:agent:x';
+         CREATE attribute:memory SET name = 'memory';
+         CREATE card_eval:e SET subject_did='did:agent:x', attribute='memory', \
+             grade=0.8, passed=true, metrics={}, improvement_areas=[], \
+             evaluated_at=time::now(), \
+             conditions={ protocol:'AMB-001@0.1.0', dataset:'q', sample_size:10, \
+                          trials:1, evaluator_version:'0.1.0' };
+         RELATE subject:s->evaluated->card_eval:e;
+         RELATE card_eval:e->measures->attribute:memory;",
+    )
+    .await.unwrap().check().unwrap();
+
+    // Expand/crawl along the graph: subject -> ... -> attribute.
+    let rows: Vec<serde_json::Value> = db
+        .query("SELECT ->evaluated->card_eval->measures->attribute.name AS attrs FROM subject:s")
+        .await.unwrap().take(0).unwrap();
+    assert!(rows[0].to_string().contains("memory"), "graph expand: {rows:?}");
 }
 
 #[tokio::test]
