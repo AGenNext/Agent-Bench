@@ -9,6 +9,12 @@ in **two roles**:
   Assurance (PAS) test cases in benchmarks. → OWASP Top 10 for **LLM/Agentic
   Applications**.
 
+> **Repo boundary:** formal compliance-framework mappings (SOC 2, EU AI Act,
+> NIST AI RMF, OWASP Agentic) and attestation evidence are owned by
+> **[Agent-Compliance](https://github.com/AGenNext/Agent-Compliance)**. Here we
+> only define the **evaluation** side — turning OWASP-LLM threats into scored
+> Assurance test cases whose result packages become compliance evidence upstream.
+
 Consistent with our principle that **enforcement is owned by the runtime**, each
 control names the CNCF/runtime component that enforces it — the app declares
 intent and observes verdicts.

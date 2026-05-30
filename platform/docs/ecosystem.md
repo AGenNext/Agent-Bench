@@ -10,6 +10,7 @@ repos and must not be reimplemented here.
 | **[Agent-Auth](https://github.com/AGenNext/Agent-Auth)** | Authentication & authorization plane — identity provider (casdoor), tokens, OpenFGA fine-grained authz | Platform validates tokens & delegates authz decisions here |
 | **[Agent-IGA](https://github.com/AGenNext/Agent-IGA)** | Identity Governance & Administration — agent/user lifecycle, entitlements, access reviews, zero-trust policy | Platform consumes governance verdicts; enforcement owned upstream |
 | **[Agent-PAM](https://github.com/AGenNext/Agent-PAM)** | Privileged Access Management — agent privilege rings, just-in-time elevation, session brokering, kill-switch | Agents-under-test run under PAM-granted privilege; platform records what PAM allowed/killed |
+| **[Agent-Compliance](https://github.com/AGenNext/Agent-Compliance)** | Compliance frameworks — SOC 2, EU AI Act, NIST AI RMF, OWASP Agentic mappings, evidence & attestation | Benchmark result packages feed compliance evidence; framework mappings owned here |
 | **[Agent-LCM](https://github.com/AGenNext/Agent-LCM)** | Agent Lifecycle Management — versioning, promotion, rollout, retirement | **Consumes Agent-Bench rankings**: eval results gate promotion/retirement |
 | **[Agent-Memory](https://github.com/AGenNext/Agent-Memory)** | Agent memory layer (recall, conflict, decay) | Benchmarked by the AMB-001 suite |
 | **Agent-Eval** | Reusable scoring functions, rubrics, CLEAR components | Agent-Bench calls these for scoring |
