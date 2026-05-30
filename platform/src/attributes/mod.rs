@@ -44,3 +44,4 @@
 //! comparable as metrics are refined over time.
 
 pub mod memory;
+pub mod trajectory;

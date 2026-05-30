@@ -49,6 +49,8 @@ implementing file.
 | **Attribute eval** (`src/attributes/`) | evaluate one agent attribute at a time | both questions, per attribute | per-task results for the attribute | the attribute's protocol | attribute verdict |
 | **Memory attribute** (`src/attributes/memory.rs`) | memory quality of an agent | how good is its memory / what to fix | `MemoryQueryResult[]` (recall/gap/conflict/latency) + cold-start + deps | `MemoryThresholds` (AMB-001) | `MemoryVerdict` (grade, passed, `improvement_areas`) |
 | **Memory comparison** (`compare()`) | rank frameworks on memory | how good vs. others / gap-to-leader | `FrameworkMemory[]` (Agent-Memory, Mem0, Zep, Letta) | `MemoryThresholds` | `MemoryComparison` (ranking, per-metric leader, focal next-level) |
+| **Trajectory attribute** (`src/attributes/trajectory.rs`) | score the execution path, not just the final answer | how good is the trajectory / what to fix | `TrajectoryInput` (tool calls, steps, plan, actions) | `TrajectoryThresholds` (TRAJ-001) | `TrajectoryVerdict` (tool-call accuracy, step efficiency, plan adherence, grounding) |
+| **Judge** (`src/judge.rs`) | LLM-as-a-judge interface (pointwise/pairwise) | quality vs. natural-language criteria | output(s) + criteria | a judge model (runtime) | score / ordering — `DeterministicJudge` stub offline; real impl wraps an LLM |
 | **CLEAR** (`src/metrics/clear.rs`) | cost/latency/efficacy/assurance/reliability | quality across dimensions | `TaskObservation[]` | thresholds + weights | `ClearScores` (CNA, CPS, SCR, PAS), `pass_at_k`, composite |
 | **Ranking** (`src/metrics/ranking.rs`) | rank fidelity + cost reduction | how stable is the ranking / which tasks suffice | predicted/actual scores; task pass-rates | mid-range band `[0.30,0.70]` | Spearman ρ, Kendall τ, selected task set |
 | **Progress** (`src/metrics/progress.rs`) | incremental task advancement | how far did it get | matching scores / subgoals; actions | — | progress rate, success rate, grounding accuracy |
@@ -73,7 +75,15 @@ implementing file.
 |---|---|---|---|
 | **Benchmark contract** (`contracts/benchmark-contract.md`) | the result-package schema | structure of a verifiable result | YAML schema |
 | **AMB-001** (`benchmarks/memory/AMB-001-benchmark.yaml`) | the memory protocol | metrics + thresholds for memory | benchmark YAML |
-| **Reference library** (`benchmarks/reference/`) | canonical metric definitions (glossary + formulas) | the *meaning* of each metric the engine computes | markdown |
+| **Metric references** (`platform/schema/metrics.surql`) | `metric_ref` manifest — metric ids only, no formulas | which Agent-Metrics definitions Bench consumes (`agent-metrics:<key>@<version>`) | SurrealQL `UPSERT` |
+| **Reference library** (`benchmarks/reference/`) | reading notes on external frameworks | context for the metrics Bench references | markdown |
+
+> **Definition boundary.** Agent-Bench measures and reports; it does **not**
+> define metrics. Canonical formulas/grammar live in **Agent-Metrics**
+> (`github.com/AGenNext/Agent-Metrics`) and are referenced by id. Frameworks
+> that *apply* metrics own their application, not the formula: CLEAR →
+> **Agent-Eval**, SLOs/QoS → **Agent-SLA**, cross-attribute roll-up/leveling →
+> **Agent-GPA**. Bench's `metric_ref` table holds only references.
 | **Migrations** (`platform/migrations/*.surql`) | tenant schema + fields + permissions | the storage grammar | SurrealQL `DEFINE` |
 
 ## Data flow (memory attribute, end to end)

@@ -302,9 +302,47 @@ pub struct LeaderboardRow {
     pub conditions_hash: Option<String>,
 }
 
+/// A maturity-level band: an entity at `grade >= min_grade` reaches this level.
+/// Level schemes are inputs (like protocols), not hardcoded; the Salesforce
+/// Agentic Maturity Model ships as one scheme via [`salesforce_agentic_levels`].
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LevelBand {
+    pub level: u8,
+    pub name: String,
+    pub min_grade: f64,
+}
+
+/// Salesforce Agentic Maturity Model — 4 levels.
+pub fn salesforce_agentic_levels() -> Vec<LevelBand> {
+    vec![
+        LevelBand { level: 1, name: "Fixed-Function".into(), min_grade: 0.0 },
+        LevelBand { level: 2, name: "Knowledge & Reasoning".into(), min_grade: 0.50 },
+        LevelBand { level: 3, name: "Multistep / Multi-turn".into(), min_grade: 0.70 },
+        LevelBand { level: 4, name: "Multi-Agent / Autonomous".into(), min_grade: 0.90 },
+    ]
+}
+
+/// Assign the highest level band a grade reaches. Returns `(level, name)`.
+pub fn assign_level(grade: f64, bands: &[LevelBand]) -> Option<(u8, String)> {
+    bands
+        .iter()
+        .filter(|b| grade >= b.min_grade)
+        .max_by(|a, b| a.level.cmp(&b.level))
+        .map(|b| (b.level, b.name.clone()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn salesforce_levels_assign_by_grade() {
+        let s = salesforce_agentic_levels();
+        assert_eq!(assign_level(0.95, &s), Some((4, "Multi-Agent / Autonomous".into())));
+        assert_eq!(assign_level(0.72, &s), Some((3, "Multistep / Multi-turn".into())));
+        assert_eq!(assign_level(0.55, &s), Some((2, "Knowledge & Reasoning".into())));
+        assert_eq!(assign_level(0.10, &s), Some((1, "Fixed-Function".into())));
+    }
 
     #[test]
     fn threshold_pass_and_severity_work() {
