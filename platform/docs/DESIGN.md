@@ -54,7 +54,7 @@ implementing file.
 | **Progress** (`src/metrics/progress.rs`) | incremental task advancement | how far did it get | matching scores / subgoals; actions | — | progress rate, success rate, grounding accuracy |
 | **Perf** (`src/metrics/perf.rs`) | multi-hardware kernel/codegen perf | how fast + correct | `PerfObservation[]` (correct, baseline vs kernel latency) | per-hardware target | `PerfScores` (correctness, geomean speedup, `fast_p`) |
 | **Scoring** (`src/scoring.rs`) | aggregate a run | run-level answer | `TaskResult[]` | `ClearWeights` | `RunScores` + `improvement_areas()` |
-| **Card update** (`src/card.rs`) | write results to the subject's card | persists the answers on the subject | a verdict + subject DID + `protocol@v` | registry card schema | `CardEval` + `as_card_patch()` (keyed by attribute) |
+| **Card update** (`src/card.rs`) | write results + **documented test conditions** to the subject's card | "tested under *these conditions* → *this result*" | a verdict + subject DID + `TestConditions` (protocol@v, dataset, sample size, trials, hardware/dsl, evaluator version) | registry card schema | `CardEval` (conditions + grade + metrics + improvement areas) + `as_card_patch()` keyed by attribute |
 
 ### Service layer (`server` feature)
 
