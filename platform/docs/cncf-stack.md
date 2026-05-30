@@ -30,7 +30,9 @@ Concretely:
 | Resource limits | Kubernetes limits/quotas + KEDA | requests a budget; the kubelet enforces it |
 | Egress / data exfil | Cilium L7 policy + Falco | declares allowed egress; the CNI blocks the rest |
 | Policy / compliance | OPA Gatekeeper (admission) + Falco (runtime) | emits the desired policy; the runtime admits/kills |
-| Identity / authz | SPIFFE/SPIRE SVIDs + mesh mTLS | presents an SVID; the mesh authorizes |
+| Identity / authn | SPIFFE/SPIRE SVIDs + mesh mTLS | presents an SVID; the mesh authorizes |
+| Fine-grained authz | OpenFGA `Check` (fail-closed) | asks "may user X do Y on Z?"; never decides itself |
+| Agent policy / audit | Microsoft AGT middleware | declares policy; AGT enforces + audits |
 | Sandbox escape | Kata / gVisor / WasmEdge | runs the agent; the sandbox contains it |
 
 This means the platform's **Assurance (PAS)** signals are *observed* from
@@ -65,6 +67,8 @@ stopped by the runtime; we record the violation as a CLEAR signal.
 |---|---|---|
 | Tenant isolation | **vCluster** 🔵 / **Capsule** 🔵 | Virtual clusters / namespace tenancy per enterprise — mirrors our SurrealDB namespace-per-tenant model at the infra layer. |
 | Workload identity | **SPIFFE/SPIRE** 🟢 | Zero-trust identity per tenant workload; no shared secrets across tenants. |
+| Fine-grained authz | **OpenFGA** 🔵 | Zanzibar-style ReBAC: who may submit/view which agents, runs, leaderboards. Called fail-closed before every op. See `governance.md`. |
+| Agent governance | **Microsoft AGT** (not CNCF) | Deterministic, fail-closed policy + Merkle audit + privilege rings for the *agents under test*. Rust impl. See `governance.md`. |
 | Policy enforcement | **OPA/Gatekeeper** 🟢 + **Kyverno** 🟡 | **Runtime owns enforcement** at admission. The app emits intended policy; Gatekeeper admits or denies. PAS is observed from denials, not computed in-app. |
 | Runtime security | **Falco** 🟢 | Enforces at runtime: detects/kills escapes & policy abuse from untrusted agents. Falco events feed the Assurance signal. |
 | TLS / certs | **cert-manager** 🟢 | Automated mTLS for API + mesh. |
