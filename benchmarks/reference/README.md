@@ -19,6 +19,7 @@ Each file links back to its original.
 | [clear-enterprise-evaluation.md](clear-enterprise-evaluation.md) | CLEAR: Cost, Latency, Efficacy, Assurance, Reliability — enterprise agent evaluation | Mehta, arXiv:2511.14136 |
 | [agent-as-a-judge.md](agent-as-a-judge.md) | Agent-as-a-Judge framework & the DevAI benchmark (process-level evaluation) | Zhuge et al., arXiv:2410.10934 |
 | [agentboard.md](agentboard.md) | Fine-grained progress-rate metric for multi-turn LLM agents; 9 tasks across embodied/game/web/tool | Ma et al., NeurIPS 2024 D&B |
+| [akg-kernel-agent.md](akg-kernel-agent.md) | Multi-agent kernel synthesis; KernelBench correctness + speedup (geomean, fast_p) | Du et al., arXiv:2512.23424 |
 | [mlflow-agent-evaluation.md](mlflow-agent-evaluation.md) | Scorers, LLM judges, traces, trajectory metrics, judge calibration | MLflow practical guide + docs |
 | [aws-bedrock-agentcore-evaluations.md](aws-bedrock-agentcore-evaluations.md) | Built-in/custom evaluators, ground-truth & trajectory scoring, online vs. on-demand | AWS Bedrock AgentCore docs |
 | [petri-net-agent-performance.md](petri-net-agent-performance.md) | Design-time performance prediction via pa-UML → GSPN | Merseguer, Campos & Mena |
