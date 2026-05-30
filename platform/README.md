@@ -8,6 +8,26 @@ its agents, runs them against benchmark suites, and gets **ranked** results plus
 Built natively on **SurrealDB** (embedded), **Axum**, and a pure-Rust scoring
 engine derived from the [reference library](../benchmarks/reference/).
 
+## Positioning — we bring the *model*, not the infra
+
+> Hugging Face has the infra; we bring the model.
+
+The infrastructure is **adopted, not rebuilt**, and **enforcement is owned by the
+runtime**:
+
+| Layer | Owned by (adopted) |
+|---|---|
+| Kernel / model hosting & registry | **Hugging Face** (Kernels Hub, model hosting) |
+| Control plane / runtime | **AgentField** + the **CNCF stack** (k8s, Kata, Cilium, Argo, …) |
+| **Policy & access enforcement** | **SurrealDB enforces** at the data layer — verifies Agent-Auth JWTs, applies record-level `PERMISSIONS` (see [docs/surrealdb-security.md](docs/surrealdb-security.md)). The app never enforces. |
+| **Telemetry & measurement** | **ClickHouse** — high-volume run/step metrics, time-series, leaderboard analytics, drift signals (the *measurement* store; SurrealDB stays the transactional + enforcement store) |
+| Identity / authz / governance | **Agent-Auth / IGA / PAM / Guard** (see [docs/ecosystem.md](docs/ecosystem.md)) |
+
+What **Agent-Bench brings is the evaluation *model***: the scoring engine
+(CLEAR · rank-fidelity · progress · perf/speedup), mid-range task selection,
+benchmark contracts, and the ranked leaderboard with improvement areas. That —
+not infrastructure — is the value we add on top.
+
 ## Architecture
 
 ```

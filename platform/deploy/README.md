@@ -41,6 +41,29 @@ curl localhost:8080/health
   backend (commented in `surrealdb.yaml`) and run SurrealDB stateless with N
   replicas.
 
+## Helm — the graph, human- and machine-readable
+
+The raw manifests here are the starting point; the **Helm chart is the canonical
+expression of the deployment graph** — every component and its dependencies
+(API → SurrealDB → ClickHouse → auth plane → sandbox runtime), the wiring
+between them, and their config — in **one form that humans read and machines
+apply**. It is what Argo CD / Flux sync from git (GitOps), so the graph is
+versioned, reviewed, and rolled back like code.
+
+```
+chart/
+  Chart.yaml              # the graph's identity + dependencies (subcharts)
+  values.yaml            # human-readable knobs (replicas, DB URL, thresholds)
+  templates/
+    platform.yaml         # API Deployment + Service
+    surrealdb.yaml        # transactional + enforcement store
+    clickhouse.yaml       # telemetry / measurement store
+    evaluationpolicy.yaml # the reconcile CRD (desired eval state)
+```
+
+Reading the chart = reading the system graph; applying it = materializing that
+graph on the cluster. (Roadmap: the manifests above become this chart.)
+
 ## Identity & auth
 
 Authentication/authorization is **not** owned by this platform — it integrates

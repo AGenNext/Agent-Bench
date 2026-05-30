@@ -90,6 +90,7 @@ stopped by the runtime; we record the violation as a CLEAR signal.
 | Trace backend | **Jaeger** 🟢 | Store/query agent run traces. |
 | Metrics | **Prometheus** 🟢 | Run counts, latencies, pass rates. |
 | Long-term metrics | **Thanos** 🟡 / **Cortex** 🟡 | Historical leaderboard / drift trends. |
+| **Telemetry / measurement store** | **ClickHouse** | High-volume per-step run telemetry, time-series, leaderboard analytics, drift. The *measurement* plane (SurrealDB stays transactional + enforcement). See `telemetry.md`. |
 | Logs | **Fluent Bit** 🟢 | Per-tenant log shipping. |
 | **Cost** | **OpenCost** 🟡 | Measures per-run \$ cost — directly populates the **C** (Cost) dimension of CLEAR / CNA / CPS. |
 
