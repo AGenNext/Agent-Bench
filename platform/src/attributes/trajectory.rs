@@ -5,6 +5,12 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::evaluation::{
+    default_attribute_grade, default_improvement_areas, default_passed, AttributeRef,
+    AttributeScore, BenchmarkRef, EntityRef, MetricDirection, MetricScore, MetricSpec, ProtocolRef,
+    Threshold,
+};
+
 /// Raw counts observed over an agent run's trajectory.
 #[derive(Debug, Clone, Copy)]
 pub struct TrajectoryInput {
@@ -122,9 +128,60 @@ pub fn evaluate_default(i: TrajectoryInput) -> TrajectoryVerdict {
     evaluate(&score(i), TrajectoryThresholds::default())
 }
 
+// --- Trajectory as a protocol implementation under the generic metamodel ----
+
+/// Emit the generic `AttributeScore` for the trajectory attribute.
+pub fn attribute_score(entity: EntityRef, s: &TrajectoryScores, t: TrajectoryThresholds) -> AttributeScore {
+    let spec = |key: &str, threshold| MetricSpec {
+        key: key.into(),
+        direction: MetricDirection::HigherIsBetter,
+        formula: None,
+        threshold: Some(Threshold::Gte(threshold)),
+        weight: None,
+    };
+    let specs = [
+        spec("tool_call_accuracy", t.tool_call_accuracy),
+        spec("step_efficiency", t.step_efficiency),
+        spec("plan_adherence", t.plan_adherence),
+        spec("grounding_accuracy", t.grounding_accuracy),
+    ];
+    let values = [s.tool_call_accuracy, s.step_efficiency, s.plan_adherence, s.grounding_accuracy];
+    let metric_scores: Vec<MetricScore> = specs
+        .iter()
+        .zip(values)
+        .map(|(spec, v)| MetricScore::from_spec(spec, v, None))
+        .collect();
+    AttributeScore {
+        entity,
+        attribute: AttributeRef { key: "trajectory".into(), name: Some("Trajectory".into()) },
+        protocol: ProtocolRef { key: "TRAJ-001".into(), version: "0.1.0".into() },
+        benchmark: BenchmarkRef { key: "TRAJ-001".into(), version: "0.1.0".into() },
+        grade: default_attribute_grade(&metric_scores),
+        passed: default_passed(&metric_scores),
+        confidence: None,
+        confidence_band: None,
+        level: None,
+        improvement_areas: default_improvement_areas(&metric_scores),
+        metric_scores,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::evaluation::EntityRef;
+
+    #[test]
+    fn attribute_score_matches_verdict() {
+        let s = score(good());
+        let verdict = evaluate(&s, TrajectoryThresholds::default());
+        let entity = EntityRef { id: "did:agent:x".into(), entity_type: "agent".into(), name: None, version: None };
+        let a = attribute_score(entity, &s, TrajectoryThresholds::default());
+        assert!((a.grade - verdict.grade).abs() < 1e-9);
+        assert_eq!(a.passed, verdict.passed);
+        assert_eq!(a.attribute.key, "trajectory");
+        assert_eq!(a.metric_scores.len(), 4);
+    }
 
     fn good() -> TrajectoryInput {
         TrajectoryInput {
