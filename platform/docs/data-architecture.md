@@ -104,9 +104,46 @@ analytics. Because the destination is known, the light start avoids dead-ends �
 schemas, the registry-digest references, and the `Store` abstraction are all
 shaped for the end state from day one.
 
-> **Note / open decision.** The platform ships today on **embedded SurrealDB**
-> for its control plane + enforcement (working, tested). The **enterprise DAM is
-> ArangoDB** and **analytics is ClickHouse**. Whether the platform's control-plane
-> store later consolidates onto ArangoDB or stays SurrealDB is an open call; the
-> repository layer (`Store`) keeps that swappable. Pinned here so the tiering is
-> explicit and the docs don't imply a single-store world.
+## SurrealDB: everything now, only the *grammar* at the end
+
+SurrealDB's **scope narrows** as the system grows — it is not removed, it is
+distilled:
+
+- **Now (light start):** *everything* lives in SurrealDB — agents, runs, scores,
+  assets, tool/skill definitions, events (change feeds). One embedded binary on a
+  single node holds the whole world. That's the right way to start.
+- **At the end:** SurrealDB contains **only the language and the grammar** — the
+  schema, types, record `PERMISSIONS`, and the declarative **vocabulary/ontology**
+  that everything else speaks. The *data* tiers out:
+  - assets → **ArangoDB → data lake**
+  - analytics/telemetry → **ClickHouse**
+  - immutable artifacts → **registry** (by digest)
+  - infra/resources → **Terraform** (the shared schema.org/JSON-LD-style language)
+
+So at the destination SurrealDB is the **grammar authority** — the typed,
+permissioned definition of *what the language is* (entities, relationships,
+constraints, who-may-touch-what) — while the bulk data and assets live in the
+purpose-built tiers. It stops being the data lake and becomes the **schema +
+grammar of the whole system**, consistent with the all-declarative end state.
+
+This is why the `Store` abstraction matters: the same code path that today reads
+*data* from SurrealDB later reads *grammar* from SurrealDB and *data* from
+ArangoDB/ClickHouse — the transition is adapters + config, not a rewrite.
+
+### The grammar is itself declarative
+
+And the grammar layer fits the all-declarative end with **no exception**: a
+SurrealDB schema is expressed *declaratively*. The `DEFINE TABLE / FIELD /
+ACCESS / PERMISSIONS` statements — our versioned `.surql` migrations — *are* a
+declarative grammar definition, not imperative code:
+
+```surql
+DEFINE TABLE agent SCHEMAFULL PERMISSIONS FOR select WHERE owner = $auth.id;
+DEFINE FIELD scaffold ON agent TYPE string;
+DEFINE ACCESS agent_auth ON DATABASE TYPE JWT ALGORITHM RS256 KEY "...";
+```
+
+So at the end state everything is declarative — Terraform (infra), Helm (app
+graph), CRDs (desired eval state), **and SurrealQL `DEFINE` (the grammar)** — one
+declarative world, with SurrealDB holding the typed, permissioned vocabulary the
+rest of the system is checked against.
