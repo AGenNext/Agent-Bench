@@ -16,6 +16,12 @@ first — it's the canonical map of the repo.
 Rule of thumb: **small thing → straight to a PR; anything that needs discussion
 or is non-trivial → issue first.**
 
+**In case of doubt, confirm with the user.** An agent may decide how far to
+expand or reduce its working context (max = all nodes/files/logs in scope;
+min = the current topic) — but when the scope, intent, or correct change is
+ambiguous, it asks rather than guesses. Don't write something that might be
+wrong; confirm first.
+
 ## Issues
 
 **Bug:**

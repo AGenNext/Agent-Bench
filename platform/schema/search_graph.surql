@@ -19,3 +19,16 @@ DEFINE INDEX attribute_name ON attribute FIELDS name UNIQUE;
 -- Relation edges (graph crawl / construct).
 DEFINE TABLE evaluated TYPE RELATION FROM subject  TO card_eval;
 DEFINE TABLE measures  TYPE RELATION FROM card_eval TO attribute;
+
+-- Everything is a searchable node in the site, so MAX context = all nodes,
+-- all files, full logs; MIN context = the current topic node. The agent decides
+-- how far to expand or reduce along the graph, within the site (= this database).
+DEFINE TABLE file SCHEMAFULL;
+DEFINE FIELD path    ON file TYPE string;
+DEFINE FIELD content ON file TYPE string;
+DEFINE INDEX file_search ON file FIELDS content SEARCH ANALYZER ab_text BM25 HIGHLIGHTS;
+
+DEFINE TABLE log SCHEMAFULL;
+DEFINE FIELD at      ON log TYPE datetime DEFAULT time::now();
+DEFINE FIELD message ON log TYPE string;
+DEFINE INDEX log_search ON log FIELDS message SEARCH ANALYZER ab_text BM25;
