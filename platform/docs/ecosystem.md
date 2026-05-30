@@ -1,54 +1,85 @@
 # AGenNext Ecosystem & Repo Boundaries
 
-Agent-Bench is one repo in a larger system. **Agent-Bench owns benchmarking and
-performance evaluation only.** Identity, auth, and governance have dedicated
-repos and must not be reimplemented here.
+AGenNext is a large suite (~169 repos). **Agent-Bench owns benchmarking and
+performance evaluation only.** Everything else has a dedicated home and must not
+be reimplemented here. This doc keeps detailed prose for the repos Agent-Bench
+*actually exchanges data with*, and groups the rest by plane.
 
-| Repo | Owns | This platform's relationship |
+## Direct integrations (data in/out of Agent-Bench)
+
+These touch the scoring path directly.
+
+| Repo | Owns | Relationship to Agent-Bench |
 |---|---|---|
-| **Agent-Bench** (here) | Reproducible benchmark suites, eval runs, scoring engine (CLEAR / rank fidelity / progress rate), leaderboards, result packages | — |
-| **[Agent-Auth](https://github.com/AGenNext/Agent-Auth)** | Authentication & authorization plane — identity provider (casdoor), tokens, OpenFGA fine-grained authz | Platform validates tokens & delegates authz decisions here |
-| **[Agent-IGA](https://github.com/AGenNext/Agent-IGA)** | Identity Governance & Administration — agent/user lifecycle, entitlements, access reviews, zero-trust policy | Platform consumes governance verdicts; enforcement owned upstream |
-| **[Agent-Access](https://github.com/AGenNext/Agent-Access)** | Access management — access requests, grants, entitlement enforcement for agents & users | Platform's resource access is brokered here; it issues no grants itself |
-| **[Agent-PAM](https://github.com/AGenNext/Agent-PAM)** | Privileged Access Management — agent privilege rings, just-in-time elevation, session brokering, kill-switch | Agents-under-test run under PAM-granted privilege; platform records what PAM allowed/killed |
-| **[Agent-Compliance](https://github.com/AGenNext/Agent-Compliance)** | Compliance frameworks — SOC 2, EU AI Act, NIST AI RMF, OWASP Agentic mappings, evidence & attestation | Benchmark result packages feed compliance evidence; framework mappings owned here |
-| **[Agent-Guard](https://github.com/AGenNext/Agent-Guard)** | Guardrails for every agent — input/output filtering, policy at inference time | **Enforces** agent behavior at runtime; Agent-Bench measures how agents fare against guardrail-style threats |
-| **[Agent-Cognitive-Guard](https://github.com/AGenNext/Agent-Cognitive-Guard)** | Cognitive-layer safety — reasoning/intent monitoring, jailbreak & prompt-injection detection | Detects/blocks at the cognitive layer; its signals feed the Assurance (PAS) metric |
-| **[Agent-Security](https://github.com/AGenNext/Agent-Security)** | Security plane — threat detection, posture, incident response across the fleet | Provides the security signals/threat model; Agent-Bench measures agents against them |
-| **[Agent-Threat](https://github.com/AGenNext/Agent-Threat)** | Threat intelligence & modeling — attack taxonomies, adversarial test corpora, TTPs | Supplies the adversarial scenarios that become Assurance (PAS) benchmark cases |
-| **[Agent-Health](https://github.com/AGenNext/Agent-Health)** | Agent health & SRE — liveness, reliability monitoring of deployed agents | Live health metrics complement benchmark Reliability (pass@k); shared telemetry |
-| **[Agent-Drift](https://github.com/AGenNext/Agent-Drift)** | Drift detection — behavioral/performance/data drift over time | Triggers re-benchmarking; consumes our temporal scores to detect degradation (ties to mid-range re-selection) |
-| **[Agent-Sight](https://github.com/AGenNext/Agent-Sight)** | Observability — tracing, metrics, dashboards across the agent fleet | Receives Agent-Bench OpenTelemetry traces/metrics; the eval/leaderboard data surfaces in its dashboards |
-| **[Agent-Hooks](https://github.com/AGenNext/Agent-Hooks)** | Event hooks / webhooks — lifecycle event bus & integrations across the suite | Agent-Bench emits events (run scored, leaderboard changed) and subscribes to triggers (new agent → eval) |
-| **[Agent-Traces](https://github.com/AGenNext/Agent-Traces)** | Trace store — agent execution traces/rollouts, the per-step record | Agent-Bench scores over these traces (trajectory metrics, progress rate); result packages reference them as evidence |
-| **[Agent-Analytics](https://github.com/AGenNext/Agent-Analytics)** | Analytics — aggregate insights, trends, BI across agents & evals | Consumes Agent-Bench results/leaderboards for cross-agent analysis; downstream of our scores |
-| **[Agent-SLA](https://github.com/AGenNext/Agent-SLA)** | SLA/SLO management — latency/availability targets, error budgets, breach alerting | Defines the SLA thresholds Agent-Bench scores against (CLEAR Latency / SCR) |
-| **[Agent-Risk](https://github.com/AGenNext/Agent-Risk)** | Risk management — risk scoring, assessment, registers across agents | Consumes benchmark scores + Assurance as risk inputs |
-| **[Agent-Trust](https://github.com/AGenNext/Agent-Trust)** | Trust scoring — reputation, attestation, trust-chain across agents | Folds benchmark rankings + Assurance into trust scores; we feed it, it doesn't gate eval |
-| **[Agent-LCM](https://github.com/AGenNext/Agent-LCM)** | Agent Lifecycle Management — versioning, promotion, rollout, retirement | **Consumes Agent-Bench rankings**: eval results gate promotion/retirement |
+| **Agent-Eval** | Reusable scoring functions, rubrics, CLEAR components | Agent-Bench *calls* these to score runs |
+| **[Agent-Frameworks](https://github.com/AGenNext/Agent-Frameworks)** | Agent frameworks / **scaffolds** (ReAct, Plan-Execute, …) | These are the *scaffolds under test* — the source of scaffold-driven distribution shift the benchmark must generalize across |
+| **[Agent-Runs](https://github.com/AGenNext/Agent-Runs)** | Canonical run/execution records | Agent-Bench reads run records and writes scored results |
+| **[Agent-Traces](https://github.com/AGenNext/Agent-Traces)** | Per-step execution traces/rollouts | Trajectory metrics + progress rate are scored over these; cited as result-package evidence |
 | **[Agent-Memory](https://github.com/AGenNext/Agent-Memory)** | Agent memory layer (recall, conflict, decay) | Benchmarked by the AMB-001 suite |
-| **Agent-Eval** | Reusable scoring functions, rubrics, CLEAR components | Agent-Bench calls these for scoring |
+| **[Agent-LCM](https://github.com/AGenNext/Agent-LCM)** | Lifecycle management — promotion, rollout, retirement | **Consumes rankings** to gate promotion/retirement |
+| **[Agent-Drift](https://github.com/AGenNext/Agent-Drift)** | Behavioral/performance/data drift detection | **Triggers re-benchmarking** (paper's ρ<0.75 reselection) |
+| **[Agent-SLA](https://github.com/AGenNext/Agent-SLA)** | SLA/SLO targets, error budgets | Defines thresholds for CLEAR Latency / SLA Compliance Rate |
+| **[Agent-FinOps](https://github.com/AGenNext/Agent-FinOps)** + **[Agent-Wallet](https://github.com/AGenNext/Agent-Wallet)** | Cost management / billing / credits | Supply per-run \$ cost → CLEAR **Cost** (CNA, CPS) |
+| **[Agent-Threat](https://github.com/AGenNext/Agent-Threat)** | Threat intel, adversarial corpora, TTPs | Source the OWASP-LLM scenarios that become Assurance (PAS) cases |
+| **[Agent-Compliance](https://github.com/AGenNext/Agent-Compliance)** | SOC 2 / EU AI Act / NIST / OWASP mappings, evidence | **Consumes result packages** as compliance evidence |
+| **[Agent-Risk](https://github.com/AGenNext/Agent-Risk)** / **[Agent-Trust](https://github.com/AGenNext/Agent-Trust)** | Risk scoring / trust scoring | Consume benchmark scores + Assurance as inputs (downstream; don't gate eval) |
+| **[Agent-Analytics](https://github.com/AGenNext/Agent-Analytics)** | Cross-agent BI, trends | Consumes results/leaderboards for analysis |
+| **[Agent-Sight](https://github.com/AGenNext/Agent-Sight)** | Observability — traces, metrics, dashboards | Receives Agent-Bench OTel telemetry; eval data surfaces here |
+| **[Agent-Hooks](https://github.com/AGenNext/Agent-Hooks)** | Event bus / webhooks | Agent-Bench emits (run scored, leaderboard changed) & subscribes (new agent → eval) |
 
-> **[Agent-Projects](https://github.com/AGenNext/Agent-Projects)** — portfolio /
-> coordination across the AGenNext suite (project & task tracking). Not a runtime
-> dependency of Agent-Bench; listed for completeness.
+## Identity, access & governance plane (enforcement owned upstream)
+
+Agent-Bench *declares intent, validates tokens, reads decisions* — it runs no
+IdP, policy engine, or authz service.
+
+| Repo | Owns |
+|---|---|
+| **[Agent-Auth](https://github.com/AGenNext/Agent-Auth)** | AuthN/Z — identity (casdoor), tokens, OpenFGA |
+| **[Agent-Access](https://github.com/AGenNext/Agent-Access)** | Access requests, grants, entitlements |
+| **[Agent-IGA](https://github.com/AGenNext/Agent-IGA)** | Identity governance & administration |
+| **[Agent-PAM](https://github.com/AGenNext/Agent-PAM)** | Privileged access — rings, JIT elevation, kill-switch |
+| **[Agent-Secrets](https://github.com/AGenNext/Agent-Secrets)** | Secrets management |
+
+## Security & safety plane (runtime enforcement)
+
+| Repo | Owns |
+|---|---|
+| **[Agent-Security](https://github.com/AGenNext/Agent-Security)** | Security plane — detection, posture, IR |
+| **[Agent-Guard](https://github.com/AGenNext/Agent-Guard)** | I/O guardrails at inference |
+| **[Agent-Cognitive-Guard](https://github.com/AGenNext/Agent-Cognitive-Guard)** | Cognitive-layer safety, jailbreak/injection detection |
+
+## Ops, health & platform plane
+
+| Repo | Owns |
+|---|---|
+| **[Agent-Health](https://github.com/AGenNext/Agent-Health)** | Liveness / reliability monitoring |
+| **AgentKube** | Kubernetes operator / runtime for agents |
+| **Agent-Flow** | Agent workflow / orchestration |
+| **Agent-Handoff** | Agent-to-agent handoff / delegation |
+| **Agent-Features** | Feature store / flags |
+| **Agent-Standard** | Interop standards & specs |
+| **Agent-Projects** | Portfolio / coordination (project & task tracking) |
+
+> The lists above cover the repos relevant to Agent-Bench; the org has many more
+> (~169). New repos are slotted into the appropriate plane rather than given
+> bespoke prose unless they exchange data with the scoring path.
 
 ## Boundary rule
 
-> Enforcement is owned by the runtime and by the auth/IGA plane — **never** by
-> Agent-Bench. This platform *declares intent*, *validates tokens*, and *reads
+> Enforcement is owned by the runtime and by the auth/IGA/guard plane — **never**
+> by Agent-Bench. This platform *declares intent*, *validates tokens*, and *reads
 > decisions*. It does not run an IdP, a policy engine, or an authz service.
 
-## Docs that belong elsewhere (to migrate)
+## Docs that belong elsewhere (to migrate on split)
 
-These were drafted here while scoping the platform but conceptually belong to
-**Agent-Auth / Agent-IGA**. They are kept for now and should move when we split:
+Drafted here while scoping the platform; conceptually belong upstream:
 
 - `governance.md` — AGT + OpenFGA → **Agent-Auth**
-- `zero-trust.md` — AuthZEN PEP/PDP, zero-trust posture → **Agent-Auth / Agent-IGA**
-- `security-owasp.md` — Part 1 (platform defense) stays; Part 2 (agent threat
-  battery) feeds the **Assurance** benchmark category and stays in Agent-Bench
-- `cncf-stack.md` — infra runtime; the auth/identity rows reference Agent-Auth
+- `zero-trust.md` — AuthZEN PEP/PDP, zero-trust → **Agent-Auth / Agent-IGA**
+- `security-owasp.md` Part 1 (platform defense) stays; Part 2 (agent threat
+  battery) feeds the **Assurance** benchmark category and stays here
+- `surrealdb-security.md` — data-layer enforcement; identity from **Agent-Auth**
+- `cncf-stack.md` — infra runtime; auth/identity rows reference the planes above
 
 ## What stays in Agent-Bench, always
 
