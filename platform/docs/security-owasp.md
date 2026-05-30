@@ -58,12 +58,15 @@ Score) aggregates the agent's pass rate across them.
 | LLM10 | Unbounded Consumption | Cost/latency runaway (Reflexion-style loops). Caught by k8s limits + measured as cost. | Cost, Reliability |
 
 ### Enforcement vs. evaluation
-- When an agent triggers a real violation **inside our platform** (e.g. attempts
-  egress, escapes sandbox), the **runtime stops it** (Cilium/Falco/Kata) and we
-  record the event.
-- When we are **measuring** an agent's security posture, the benchmark presents
-  the OWASP-LLM scenarios and scores the response into PAS — no enforcement, just
-  observation.
+- **Enforcement is owned upstream.** Agent behavior is blocked by
+  **[Agent-Guard](https://github.com/AGenNext/Agent-Guard)** (I/O guardrails) and
+  **[Agent-Cognitive-Guard](https://github.com/AGenNext/Agent-Cognitive-Guard)**
+  (reasoning/jailbreak detection); infra violations (egress, sandbox escape) by
+  Cilium/Falco/Kata. Agent-Bench never enforces.
+- **Evaluation is ours.** When measuring an agent's security posture, the
+  benchmark presents the OWASP-LLM scenarios and scores the response into PAS —
+  no enforcement, just observation. Guard/runtime verdicts are *inputs* to that
+  score.
 
 The same OWASP taxonomy thus secures the platform *and* defines a security
 benchmark category, keeping defense and evaluation aligned.
