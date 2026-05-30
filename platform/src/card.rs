@@ -95,6 +95,37 @@ impl CardEval {
         }
     }
 
+    /// The evaluation as **schema.org JSON-LD** — a self-describing, linked
+    /// artifact whose `@context` carries the meaning, so any consumer resolves
+    /// the terms without out-of-band agreement.
+    pub fn as_jsonld(&self) -> serde_json::Value {
+        serde_json::json!({
+            "@context": {
+                "schema": "https://schema.org/",
+                "ab": "https://agent-bench.dev/ns#",
+                "subject": { "@id": "schema:about", "@type": "@id" },
+                "attribute": "ab:attribute",
+                "protocol": "ab:protocol",
+                "grade": "schema:ratingValue",
+                "passed": "ab:passed",
+                "metrics": "ab:metrics",
+                "improvementAreas": "ab:improvementArea",
+                "conditions": "ab:conditions",
+                "evaluatedAt": { "@id": "schema:dateCreated", "@type": "schema:DateTime" }
+            },
+            "@type": "ab:Evaluation",
+            "subject": self.subject_did,
+            "attribute": self.attribute,
+            "protocol": self.conditions.protocol,
+            "grade": self.grade,
+            "passed": self.passed,
+            "metrics": self.metrics,
+            "improvementAreas": self.improvement_areas,
+            "conditions": serde_json::to_value(&self.conditions).unwrap_or(serde_json::Value::Null),
+            "evaluatedAt": self.evaluated_at
+        })
+    }
+
     /// The JSON patch the registry applies to the card: results are keyed by
     /// attribute under an `evaluations` object, so repeated runs update in place.
     ///
@@ -150,6 +181,21 @@ mod tests {
         assert!((card.grade - 1.0).abs() < 1e-9);
         assert!((card.metrics["recall_accuracy"].as_f64().unwrap() - 0.8).abs() < 1e-9);
         assert!(!card.evaluated_at.is_empty());
+    }
+
+    #[test]
+    fn renders_schema_org_jsonld() {
+        let v = evaluate_amb_001(&results(), 1000.0, 0);
+        let card = CardEval::from_memory("did:agent:strong", conditions(), &v);
+        let ld = card.as_jsonld();
+
+        // Self-describing: the @context carries the meaning.
+        assert_eq!(ld["@context"]["schema"], "https://schema.org/");
+        assert_eq!(ld["@type"], "ab:Evaluation");
+        assert_eq!(ld["subject"], "did:agent:strong");
+        assert_eq!(ld["protocol"], "AMB-001@0.1.0");
+        assert!(ld["grade"].is_number());
+        assert_eq!(ld["@context"]["grade"], "schema:ratingValue");
     }
 
     #[test]
