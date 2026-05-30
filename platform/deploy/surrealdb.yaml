@@ -1,0 +1,115 @@
+# SurrealDB server for the platform.
+#
+# Fixes the CrashLoopBackOff seen with `replicas: 3` of `surrealdb:latest`:
+#   1. The image entrypoint needs an explicit `start ...` command with bind
+#      address + root auth, or the container exits immediately.
+#   2. A single SurrealKV/RocksDB store is SINGLE-NODE. You cannot run 3
+#      replicas over one RWO volume — they crashloop. Use ONE replica with a
+#      persistent volume (below), or a distributed TiKV backend for HA
+#      (see the commented block at the bottom).
+#
+# This manifest runs a single durable node — correct for getting green first.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: surrealdb
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: surrealdb-auth
+  namespace: surrealdb
+type: Opaque
+stringData:
+  user: root
+  # CHANGE ME — and prefer an ExternalSecret in production.
+  pass: "change-me-root-pass"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: surrealdb-data
+  namespace: surrealdb
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 10Gi
+  # k3s default; swap for longhorn/rook-ceph in production.
+  storageClassName: local-path
+---
+apiVersion: apps/v1
+kind: StatefulSet            # stateful, stable identity + the PVC above
+metadata:
+  name: surrealdb
+  namespace: surrealdb
+spec:
+  serviceName: surrealdb
+  replicas: 1                # SINGLE node with SurrealKV. Do NOT scale this.
+  selector:
+    matchLabels: { app: surrealdb }
+  template:
+    metadata:
+      labels: { app: surrealdb }
+    spec:
+      containers:
+        - name: surrealdb
+          image: surrealdb/surrealdb:v2.1.4   # pin, don't use :latest
+          # The fix: an explicit start command with bind + auth + storage path.
+          args:
+            - start
+            - --bind=0.0.0.0:8000
+            - --user=$(SURREAL_USER)
+            - --pass=$(SURREAL_PASS)
+            - --log=info
+            - surrealkv://data/agentbench.db
+          env:
+            - name: SURREAL_USER
+              valueFrom: { secretKeyRef: { name: surrealdb-auth, key: user } }
+            - name: SURREAL_PASS
+              valueFrom: { secretKeyRef: { name: surrealdb-auth, key: pass } }
+          ports:
+            - { name: http, containerPort: 8000 }
+          volumeMounts:
+            - { name: data, mountPath: /data }
+          readinessProbe:
+            httpGet: { path: /health, port: 8000 }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health, port: 8000 }
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests: { cpu: "250m", memory: "512Mi" }
+            limits:   { cpu: "2",    memory: "2Gi" }
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: surrealdb-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: surrealdb
+  namespace: surrealdb
+spec:
+  selector: { app: surrealdb }
+  ports:
+    - { name: http, port: 8000, targetPort: 8000 }
+
+# --------------------------------------------------------------------------
+# HA option (replaces the StatefulSet above): SurrealDB over a distributed
+# TiKV backend. Only then can you run multiple stateless SurrealDB replicas.
+#
+#   args:
+#     - start
+#     - --bind=0.0.0.0:8000
+#     - --user=$(SURREAL_USER)
+#     - --pass=$(SURREAL_PASS)
+#     - tikv://pd-service:2379          # distributed KV; supports N replicas
+#
+# Deploy TiKV/PD via the tidb-operator, then SurrealDB becomes a stateless
+# Deployment with replicas: 3 fronted by this Service.
+# --------------------------------------------------------------------------
