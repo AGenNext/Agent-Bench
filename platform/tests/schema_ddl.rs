@@ -8,6 +8,7 @@ use surrealdb::engine::any::connect;
 
 const SCHEMA_METRICS: &str = include_str!("../schema/metrics.surql");
 const SCHEMA_MEMORY: &str = include_str!("../schema/memory_attribute.surql");
+const SCHEMA_TRAJECTORY: &str = include_str!("../schema/trajectory_attribute.surql");
 
 async fn fresh() -> surrealdb::Surreal<surrealdb::engine::any::Any> {
     let db = connect("memory").await.expect("embedded surreal");
@@ -20,6 +21,20 @@ async fn schema_files_execute() {
     let db = fresh().await;
     db.query(SCHEMA_METRICS).await.expect("metrics.surql executes").check().expect("no errors");
     db.query(SCHEMA_MEMORY).await.expect("memory_attribute.surql executes").check().expect("no errors");
+    db.query(SCHEMA_TRAJECTORY).await.expect("trajectory_attribute.surql executes").check().expect("no errors");
+}
+
+#[tokio::test]
+async fn trajectory_thresholds_seeded_and_step_efficiency() {
+    let db = fresh().await;
+    db.query(SCHEMA_TRAJECTORY).await.unwrap().check().unwrap();
+    let tca: Option<f64> = db
+        .query("SELECT VALUE tool_call_accuracy FROM trajectory_thresholds:`TRAJ-001@0.1.0`")
+        .await.unwrap().take(0).unwrap();
+    assert!((tca.unwrap() - 0.80).abs() < 1e-9);
+    // step_efficiency caps at 1.0 when actual < optimal.
+    let se: Option<f64> = db.query("RETURN fn::step_efficiency(8, 4)").await.unwrap().take(0).unwrap();
+    assert!((se.unwrap() - 1.0).abs() < 1e-9);
 }
 
 #[tokio::test]
