@@ -76,6 +76,40 @@ Roles: `OWNER` > `EDITOR` > `VIEWER`, scopable at ROOT / NAMESPACE / DATABASE.
 | **Encryption at rest** | provided by the storage layer (encrypted PVs via the CNCF storage stack). |
 | **Token lifetime** | `DURATION FOR TOKEN`/`FOR SESSION` on access methods — short-lived tokens, continuous re-verification (zero-trust). |
 
+## Everything lives in the database — and the database protects it
+
+The database is not just the run store; it is the **protected system of record
+for every asset**: code, generated artifacts, business/eval logic, **tool
+definitions**, and **skill definitions** all live as records. SurrealDB's
+multi-model engine fits them naturally:
+
+| Asset | SurrealDB model |
+|---|---|
+| Code / artifacts | documents (+ blob refs by digest) |
+| Logic / rules / policies | documents / functions |
+| Tool definitions | documents with typed schemas |
+| Skill definitions | documents + **graph** edges (skill → tools, skill → skill) |
+| Memories / embeddings | **vector** fields for semantic recall |
+| Relationships | **graph** edges (agent → skill → tool) |
+
+Because access to every record is governed by the same `PERMISSIONS` + JWT layer,
+**the database protects all of it uniformly** — a tool or skill definition is
+guarded exactly like a run record. No separate ACL system per asset type; one
+enforcement plane for the whole substrate.
+
+### Database vs. registry — complementary
+
+- **Database (SurrealDB)** = the *live, protected* substrate: queryable,
+  permissioned, mutable-with-audit (change feeds). It **protects** (who may read
+  /write each asset).
+- **Registry (OCI/ORAS)** = the *immutable, signed* ledger: content-addressed
+  artifacts + attestations. It **attests** (this exact bytes, signed, with
+  provenance).
+
+The DB holds and governs the asset and references the registry digest; the
+registry proves immutability and signature. Together: the database protects
+access, the registry proves integrity.
+
 ## Migration path
 
 1. **Now (this PR):** schema + root connection; security definitions provided as
