@@ -108,6 +108,13 @@ UPSERT level_scheme:`salesforce-agentic:2` SET scheme='salesforce-agentic', leve
 UPSERT level_scheme:`salesforce-agentic:3` SET scheme='salesforce-agentic', level=3, name='Multistep / Multi-turn',    min_grade=0.70;
 UPSERT level_scheme:`salesforce-agentic:4` SET scheme='salesforce-agentic', level=4, name='Multi-Agent / Autonomous',  min_grade=0.90;
 
+-- Workspace-Bench 5-stage Workspace Learning (L0-L4). Bands illustrative.
+UPSERT level_scheme:`workspace-learning:0` SET scheme='workspace-learning', level=0, name='Data-Insensitive Execution',     min_grade=0.0;
+UPSERT level_scheme:`workspace-learning:1` SET scheme='workspace-learning', level=1, name='User-Specified File Execution', min_grade=0.40;
+UPSERT level_scheme:`workspace-learning:2` SET scheme='workspace-learning', level=2, name='File-to-File Dependency Reasoning', min_grade=0.55;
+UPSERT level_scheme:`workspace-learning:3` SET scheme='workspace-learning', level=3, name='Task-to-File Dependency Discovery', min_grade=0.70;
+UPSERT level_scheme:`workspace-learning:4` SET scheme='workspace-learning', level=4, name='Workspace-Native Self-Evolution', min_grade=0.90;
+
 -- --- Graph relations (crawl/construct) --------------------------------------
 DEFINE TABLE has_attribute  TYPE RELATION FROM entity          TO attribute;
 DEFINE TABLE uses_protocol  TYPE RELATION FROM evaluation      TO protocol;

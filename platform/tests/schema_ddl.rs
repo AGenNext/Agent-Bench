@@ -68,6 +68,14 @@ async fn metric_functions_compute_correctly() {
         .query("RETURN fn::progress_continuous([0.0, 0.25, 0.1, 0.5])")
         .await.unwrap().take(0).unwrap();
     assert!((pr.unwrap() - 0.5).abs() < 1e-9);
+
+    // Workspace-Bench F1: P=0.6, R=0.4 -> 2*.6*.4/(1.0) = 0.48
+    let f1: Option<f64> = db.query("RETURN fn::f1(0.6, 0.4)").await.unwrap().take(0).unwrap();
+    assert!((f1.unwrap() - 0.48).abs() < 1e-9);
+
+    // Workspace-Bench TCR@p: 3 of 4 tasks met -> 0.75
+    let tcr: Option<f64> = db.query("RETURN fn::tcr(3, 4)").await.unwrap().take(0).unwrap();
+    assert!((tcr.unwrap() - 0.75).abs() < 1e-9);
 }
 
 #[tokio::test]

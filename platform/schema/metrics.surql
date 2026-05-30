@@ -59,6 +59,19 @@ DEFINE FUNCTION fn::pairwise_correct_prob($tau: float) {
     RETURN ($tau + 1.0) / 2.0;
 };
 
+-- --- Workspace-Bench (arXiv:2605.03596): rubric pass rate, F1, TCR@p --------
+-- rubric_pass_rate = passed/total → reuse fn::correctness.
+-- F1 = 2PR/(P+R) — node/edge dependency-graph recognition.
+DEFINE FUNCTION fn::f1($precision: float, $recall: float) {
+    RETURN IF ($precision + $recall) > 0.0 {
+        (2.0 * $precision * $recall) / ($precision + $recall)
+    } ELSE { 0.0 };
+};
+-- TCR@p = fraction of tasks meeting >= p of their rubrics.
+DEFINE FUNCTION fn::tcr($tasks_met: int, $tasks_total: int) {
+    RETURN IF $tasks_total > 0 { <float>$tasks_met / <float>$tasks_total } ELSE { 0.0 };
+};
+
 -- --- Result shapes (DDL) ---------------------------------------------------
 DEFINE TABLE clear_scores SCHEMAFULL;
 DEFINE FIELD efficacy ON clear_scores TYPE float ASSERT $value >= 0 AND $value <= 1;
