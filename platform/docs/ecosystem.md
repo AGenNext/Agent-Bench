@@ -1,9 +1,19 @@
-# AGenNext Ecosystem & Repo Boundaries
+# AGenNext / AgentField Ecosystem & Repo Boundaries
 
-AGenNext is a large suite (~169 repos). **Agent-Bench owns benchmarking and
-performance evaluation only.** Everything else has a dedicated home and must not
-be reimplemented here. This doc keeps detailed prose for the repos Agent-Bench
-*actually exchanges data with*, and groups the rest by plane.
+**[AgentField](https://agentfield.ai/)** is the umbrella: an open-source AI
+*control plane* / backend — *"build, run and scale AI agents like APIs and
+microservices: observable, auditable, and identity-aware from day one,"* where
+**your infrastructure governs** (it sits in the stack like a database, not a
+library) and every agent gets a **W3C DID**, not a shared key.
+
+That philosophy *is* the one this platform encodes: **enforcement owned by the
+infrastructure**, identity-first, audit built in. **Agent-Bench is AgentField's
+benchmarking / evaluation plane** — it owns performance evaluation only.
+
+AGenNext is a large suite (~169 repos). Everything outside benchmarking has a
+dedicated home and must not be reimplemented here. This doc keeps detailed prose
+for the repos Agent-Bench *actually exchanges data with*, and groups the rest by
+plane.
 
 ## Direct integrations (data in/out of Agent-Bench)
 
