@@ -83,6 +83,41 @@ FrameworkMemory[]   ──compare()──►  MemoryComparison
 | **Protocols** | supplied per attribute — `AMB-001` (memory), benchmark thresholds (`pass_thresholds` in YAML), `MemoryThresholds`, `ClearWeights`, mid-range band |
 | **Outputs** | `MemoryVerdict`, `MemoryComparison`, `RunScores`, `LeaderboardEntry[]` — all reducing to **rank/grade + improvement areas** |
 
+## Proposing corrections & improvements
+
+This map is editable by every contributor — human or agent. If something here is
+wrong, stale, or could be better, **propose the change**; don't work around it.
+
+**Mechanism (uniform, so 200 agents propose consistently):**
+
+1. **Open a draft PR.** One concern per PR.
+2. **Keep this map in sync.** Any change to a component's behavior **must**
+   update its row (concept · means · answers · input · protocol · output). The
+   map and the code move together — a PR that drifts the map is incomplete.
+3. **Tests gate it.** Behavior changes add/adjust tests; `cargo test` and
+   `cargo test --features server` must stay green. New metrics ship with the
+   unit tests that pin their formula.
+4. **Use the proposal block** (in the PR description) so reviews are mechanical:
+
+   ```
+   PROPOSAL
+   kind:       correction | improvement
+   component:  <file path / map row, e.g. src/attributes/memory.rs>
+   problem:    <what is wrong or missing, with evidence>
+   change:     <the concrete change>
+   io-impact:  <input/protocol/output changes, or "none">
+   protocol:   <does this touch a protocol version? if so, bump it>
+   tests:      <added/changed tests>
+   ```
+
+5. **Protocol changes are versioned.** If a proposal changes a metric's meaning
+   or a threshold, it is a **new protocol version**, not an in-place edit — old
+   results stay valid under their stated version.
+
+Corrections (the map/code is wrong) and improvements (it could be better) use the
+same flow; `kind:` distinguishes them. The reviewer checks: map updated, tests
+green, io-impact accurate, protocol versioned if meaning changed.
+
 ## Status
 
 | Built (tested) | Schema only / planned |
