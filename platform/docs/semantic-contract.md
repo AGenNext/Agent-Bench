@@ -145,15 +145,20 @@ same way (verify conformance to the declared version):
 |---|---|---|---|
 | **Security** | threat resistance, prompt-injection/jailbreak bars, safe-output rules | Agent-Threat / Agent-Guard | adversarial conformance suite (OWASP-LLM) |
 | **Governance** | policy, access, identity, compliance (EU AI Act, NIST, SOC 2) | Agent-Auth / IGA / Compliance | policy + attestation conformance |
-| **Excellence** | quality & performance bars — pass thresholds, CLEAR mins, speedup floors | **Agent-Bench** | benchmark conformance (the scoring suite) |
+| **Excellence** | quality & performance bars — pass thresholds, CLEAR mins, speedup floors | authored elsewhere (research, standards, domains) | benchmark conformance |
 
 So "the protocol enforces" means all three at once: an artifact that declares
 `protocol@v` is verifiably **secure, governed, *and* excellent** — or it fails
-conformance. **Agent-Bench is the steward of the *excellence* protocols**: the
-benchmark thresholds, metric definitions, and result-package schema that define
-what "good enough" means, machine-checkably, federation-wide. Security and
-governance protocols come from their planes; excellence is ours — and they
-compose into one versioned protocol whose conformance is the gate.
+conformance.
+
+**Agent-Bench does *not* author or own any of these protocols** — not even the
+excellence ones. It is the **protocol-agnostic instrument** that *measures*,
+*publishes*, and *certifies* an entity against whatever `protocol@v` is supplied,
+and in doing so answers its only two questions: **how good is this agent**, and
+**what should it do next**. Security, governance, and excellence protocols all
+come from their respective sources; Agent-Bench verifies conformance and issues
+the certified attestation. The protocol is the input; measurement + certification
+is the service.
 
 #### Protocols are best practices, not just restrictions
 
@@ -205,7 +210,15 @@ tests), closing the loop with governed evolution above.
 
 ## What this means for Agent-Bench
 
-Agent-Bench is a **steward of the evaluation language**: its glossary + formulas
-+ result-package schema are part of the federation's canonical semantics. Keeping
-them sacrosanct and interoperable is as important as the scores themselves — the
-scores are only meaningful because the language is.
+Agent-Bench **consumes** the canonical language to measure and certify — it does
+not own or define it. It applies the supplied `protocol@v` (its glossary,
+formulas, thresholds) to answer its **only two questions** — *how good is this
+agent* and *what should it do next* — and publishes a certified, verifiable
+result.
+
+The language, the protocols, and the security/governance concerns themselves are
+**authored and owned in their respective repos** (Agent-Standard, Agent-Auth,
+Agent-Compliance, …) — and the cross-cutting docs in this folder migrate there on
+split (see `ecosystem.md`). Agent-Bench keeps only what answers the two
+questions: the scoring engine, the measurement/certification flow, and the
+result package. Everything else goes to its respective repo.

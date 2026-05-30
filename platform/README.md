@@ -1,9 +1,31 @@
 # Agent-Bench Platform
 
-A cloud-native, **multi-tenant** enterprise agent evaluation & leaderboard
-platform — SWE-bench-style benchmarking as a service. Each enterprise submits
-its agents, runs them against benchmark suites, and gets **ranked** results plus
-**identified improvement areas**.
+A cloud-native, **multi-tenant** platform that **measures, publishes, and
+certifies** entities against **any protocol** — SWE-bench-style benchmarking as a
+service.
+
+## It answers exactly two questions
+
+1. **How good is this agent?** — measured against a supplied `protocol@version`,
+   published as a verifiable, certified result.
+2. **What should it do next to reach the next level?** — the improvement areas
+   that close the gap.
+
+Nothing more. Rank + remedy, certified.
+
+## Agent-Bench does *not* define protocols
+
+It is **protocol-agnostic infrastructure**. Protocols — the security,
+governance, and excellence bars — come from elsewhere (research, standards
+bodies, domains, regulators). Agent-Bench is the neutral instrument that:
+
+- **measures** an entity against the protocol you bring (BYO-protocol),
+- **publishes** the result as a versioned, content-addressed package, and
+- **certifies** conformance — issuing the verifiable attestation.
+
+The protocol is the *input*; measurement + publication + certification is the
+*service*. We don't own the bar; we tell you, verifiably, where you stand against
+it and how to rise.
 
 Built natively on **SurrealDB** (embedded), **Axum**, and a pure-Rust scoring
 engine derived from the [reference library](../benchmarks/reference/).
