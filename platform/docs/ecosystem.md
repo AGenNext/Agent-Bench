@@ -18,6 +18,7 @@ repos and must not be reimplemented here.
 | **[Agent-Threat](https://github.com/AGenNext/Agent-Threat)** | Threat intelligence & modeling — attack taxonomies, adversarial test corpora, TTPs | Supplies the adversarial scenarios that become Assurance (PAS) benchmark cases |
 | **[Agent-Health](https://github.com/AGenNext/Agent-Health)** | Agent health & SRE — liveness, drift, reliability monitoring of deployed agents | Live health metrics complement benchmark Reliability (pass@k); shared telemetry |
 | **[Agent-Risk](https://github.com/AGenNext/Agent-Risk)** | Risk management — risk scoring, assessment, registers across agents | Consumes benchmark scores + Assurance as risk inputs |
+| **[Agent-Trust](https://github.com/AGenNext/Agent-Trust)** | Trust scoring — reputation, attestation, trust-chain across agents | Folds benchmark rankings + Assurance into trust scores; we feed it, it doesn't gate eval |
 | **[Agent-LCM](https://github.com/AGenNext/Agent-LCM)** | Agent Lifecycle Management — versioning, promotion, rollout, retirement | **Consumes Agent-Bench rankings**: eval results gate promotion/retirement |
 | **[Agent-Memory](https://github.com/AGenNext/Agent-Memory)** | Agent memory layer (recall, conflict, decay) | Benchmarked by the AMB-001 suite |
 | **Agent-Eval** | Reusable scoring functions, rubrics, CLEAR components | Agent-Bench calls these for scoring |
