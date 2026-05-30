@@ -75,7 +75,15 @@ implementing file.
 |---|---|---|---|
 | **Benchmark contract** (`contracts/benchmark-contract.md`) | the result-package schema | structure of a verifiable result | YAML schema |
 | **AMB-001** (`benchmarks/memory/AMB-001-benchmark.yaml`) | the memory protocol | metrics + thresholds for memory | benchmark YAML |
-| **Reference library** (`benchmarks/reference/`) | canonical metric definitions (glossary + formulas) | the *meaning* of each metric the engine computes | markdown |
+| **Metric references** (`platform/schema/metrics.surql`) | `metric_ref` manifest — metric ids only, no formulas | which Agent-Metrics definitions Bench consumes (`agent-metrics:<key>@<version>`) | SurrealQL `UPSERT` |
+| **Reference library** (`benchmarks/reference/`) | reading notes on external frameworks | context for the metrics Bench references | markdown |
+
+> **Definition boundary.** Agent-Bench measures and reports; it does **not**
+> define metrics. Canonical formulas/grammar live in **Agent-Metrics**
+> (`github.com/AGenNext/Agent-Metrics`) and are referenced by id. Frameworks
+> that *apply* metrics own their application, not the formula: CLEAR →
+> **Agent-Eval**, SLOs/QoS → **Agent-SLA**, cross-attribute roll-up/leveling →
+> **Agent-GPA**. Bench's `metric_ref` table holds only references.
 | **Migrations** (`platform/migrations/*.surql`) | tenant schema + fields + permissions | the storage grammar | SurrealQL `DEFINE` |
 
 ## Data flow (memory attribute, end to end)

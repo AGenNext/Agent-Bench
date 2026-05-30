@@ -25,57 +25,40 @@ async fn schema_files_execute() {
 }
 
 #[tokio::test]
-async fn trajectory_thresholds_seeded_and_step_efficiency() {
+async fn trajectory_thresholds_are_seeded() {
     let db = fresh().await;
     db.query(SCHEMA_TRAJECTORY).await.unwrap().check().unwrap();
     let tca: Option<f64> = db
         .query("SELECT VALUE tool_call_accuracy FROM trajectory_thresholds:`TRAJ-001@0.1.0`")
         .await.unwrap().take(0).unwrap();
     assert!((tca.unwrap() - 0.80).abs() < 1e-9);
-    // step_efficiency caps at 1.0 when actual < optimal.
-    let se: Option<f64> = db.query("RETURN fn::step_efficiency(8, 4)").await.unwrap().take(0).unwrap();
-    assert!((se.unwrap() - 1.0).abs() < 1e-9);
 }
 
 #[tokio::test]
-async fn metric_functions_compute_correctly() {
+async fn metrics_are_referenced_not_defined() {
+    // Bench does not define metric formulas. metrics.surql is a reference
+    // manifest pointing at Agent-Metrics; assert it loads and resolves ids.
     let db = fresh().await;
     db.query(SCHEMA_METRICS).await.unwrap().check().unwrap();
 
-    // Each formula must agree with the Rust reference.
-    // CNA: 50% accuracy / $2 -> 25.0
-    let cna: Option<f64> = db.query("RETURN fn::cna(0.5, 2.0)").await.unwrap().take(0).unwrap();
-    assert!((cna.unwrap() - 25.0).abs() < 1e-9);
-
-    // PAS: 1 violation / 2 critical -> 0.5
-    let pas: Option<f64> = db.query("RETURN fn::pas(1, 2)").await.unwrap().take(0).unwrap();
-    assert!((pas.unwrap() - 0.5).abs() < 1e-9);
-
-    // Geomean of [2,8] -> 4
-    let gm: Option<f64> = db.query("RETURN fn::geomean([2.0, 8.0])").await.unwrap().take(0).unwrap();
-    assert!((gm.unwrap() - 4.0).abs() < 1e-9);
-
-    // Speedup 10/5 -> 2
-    let sp: Option<f64> = db.query("RETURN fn::speedup(10.0, 5.0)").await.unwrap().take(0).unwrap();
-    assert!((sp.unwrap() - 2.0).abs() < 1e-9);
-
-    // Reduction ratio 4 total, 2 selected -> 0.5
-    let rr: Option<f64> = db.query("RETURN fn::reduction_ratio(4, 2)").await.unwrap().take(0).unwrap();
-    assert!((rr.unwrap() - 0.5).abs() < 1e-9);
-
-    // Progress over [0,0.25,0.1,0.5] -> 0.5
-    let pr: Option<f64> = db
-        .query("RETURN fn::progress_continuous([0.0, 0.25, 0.1, 0.5])")
+    // Every referenced metric carries a canonical Agent-Metrics id.
+    let refs: Vec<String> = db
+        .query("SELECT VALUE ref FROM metric_ref WHERE ref = NONE")
         .await.unwrap().take(0).unwrap();
-    assert!((pr.unwrap() - 0.5).abs() < 1e-9);
+    assert!(refs.is_empty(), "every metric_ref must carry an Agent-Metrics id");
 
-    // Workspace-Bench F1: P=0.6, R=0.4 -> 2*.6*.4/(1.0) = 0.48
-    let f1: Option<f64> = db.query("RETURN fn::f1(0.6, 0.4)").await.unwrap().take(0).unwrap();
-    assert!((f1.unwrap() - 0.48).abs() < 1e-9);
+    // CLEAR dimensions resolve to Agent-Metrics, not to a local formula.
+    let cna: Option<String> = db
+        .query("SELECT VALUE ref FROM metric_ref:cna")
+        .await.unwrap().take(0).unwrap();
+    assert_eq!(cna.as_deref(), Some("agent-metrics:cna@1.0.0"));
 
-    // Workspace-Bench TCR@p: 3 of 4 tasks met -> 0.75
-    let tcr: Option<f64> = db.query("RETURN fn::tcr(3, 4)").await.unwrap().take(0).unwrap();
-    assert!((tcr.unwrap() - 0.75).abs() < 1e-9);
+    // No formula functions are defined by Bench (would error if called).
+    let called: Result<surrealdb::Response, _> = db.query("RETURN fn::cna(0.5, 2.0)").await;
+    assert!(
+        called.is_err() || called.unwrap().check().is_err(),
+        "Bench must not define fn::cna — it lives in Agent-Metrics"
+    );
 }
 
 #[tokio::test]

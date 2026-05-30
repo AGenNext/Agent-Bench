@@ -22,8 +22,7 @@ UPSERT trajectory_thresholds:`TRAJ-001@0.1.0` SET
     plan_adherence     = 0.70,
     grounding_accuracy = 0.80;
 
--- step_efficiency = min(optimal/actual, 1); other ratios are correct/total.
-DEFINE FUNCTION fn::step_efficiency($optimal: int, $actual: int) {
-    RETURN IF $actual <= 0 { 0.0 }
-    ELSE { math::min([<float>$optimal / <float>$actual, 1.0]) };
-};
+-- Metric formulas (step_efficiency = min(optimal/actual, 1); the ratios) are
+-- NOT defined here — they are referenced from Agent-Metrics via metric_ref
+-- (agent-metrics:step_efficiency@1.0.0, …). This file holds only the result
+-- shape and the supplied thresholds.
