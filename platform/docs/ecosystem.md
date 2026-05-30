@@ -55,7 +55,8 @@ IdP, policy engine, or authz service.
 | **[Agent-Health](https://github.com/AGenNext/Agent-Health)** | Liveness / reliability monitoring |
 | **AgentKube** | Kubernetes operator / runtime for agents |
 | **Agent-Flow** | Agent workflow / orchestration |
-| **Agent-Handoff** | Agent-to-agent handoff / delegation |
+| **[Agent-Swarm](https://github.com/AGenNext/Agent-Swarm)** | Multi-agent swarm orchestration (also a benchmark target: `agent_coordination`) |
+| **Agent-Handoff** | Agent-to-agent handoff / delegation (benchmark target: coordination) |
 | **Agent-Features** | Feature store / flags |
 | **Agent-Standard** | Interop standards & specs |
 | **Agent-Projects** | Portfolio / coordination (project & task tracking) |
