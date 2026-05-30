@@ -24,6 +24,10 @@ repos and must not be reimplemented here.
 | **[Agent-Memory](https://github.com/AGenNext/Agent-Memory)** | Agent memory layer (recall, conflict, decay) | Benchmarked by the AMB-001 suite |
 | **Agent-Eval** | Reusable scoring functions, rubrics, CLEAR components | Agent-Bench calls these for scoring |
 
+> **[Agent-Projects](https://github.com/AGenNext/Agent-Projects)** — portfolio /
+> coordination across the AGenNext suite (project & task tracking). Not a runtime
+> dependency of Agent-Bench; listed for completeness.
+
 ## Boundary rule
 
 > Enforcement is owned by the runtime and by the auth/IGA plane — **never** by
