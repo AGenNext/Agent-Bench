@@ -17,6 +17,7 @@ pub mod card;
 pub mod domain;
 pub mod evaluation;
 pub mod judge;
+pub mod reference;
 
 #[cfg(feature = "server")]
 pub mod api;
