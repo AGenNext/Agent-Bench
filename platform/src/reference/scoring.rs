@@ -1,10 +1,52 @@
 //! Bridges raw per-task results to aggregate run scores and improvement areas.
-//! Pure Rust — no DB — so it is reusable by the API, the CLI, and tests.
+//! Pure Rust — no DB. Part of the reference module: mirrors how Agent-Eval
+//! composes CLEAR; not used by Bench's live evaluation path.
 
-use crate::domain::{RunScores, TaskResult};
-use crate::metrics::clear::{clear_composite, clear_scores, ClearWeights, TaskObservation};
-use crate::metrics::perf::{perf_scores, PerfObservation};
-use crate::metrics::progress::progress_rate_continuous;
+use serde::{Deserialize, Serialize};
+
+use super::clear::{clear_composite, clear_scores, ClearScores, ClearWeights, TaskObservation};
+use super::perf::{perf_scores, PerfObservation, PerfScores};
+use super::progress::progress_rate_continuous;
+
+/// A single per-task outcome (reference input shape).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskResult {
+    pub task_id: String,
+    /// Fraction of trials solved, in `[0,1]`.
+    pub success: f64,
+    #[serde(default)]
+    pub progress_rate: f64,
+    #[serde(default)]
+    pub cost_usd: f64,
+    #[serde(default)]
+    pub latency_ms: f64,
+    #[serde(default = "default_true")]
+    pub within_sla: bool,
+    #[serde(default)]
+    pub policy_violation: bool,
+    #[serde(default)]
+    pub policy_critical: bool,
+    #[serde(default = "default_true")]
+    pub correct: bool,
+    #[serde(default)]
+    pub baseline_latency_ms: f64,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+/// Aggregate run scores: CLEAR dimensions plus progress rate and composite.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct RunScores {
+    #[serde(flatten)]
+    pub clear: ClearScores,
+    pub progress_rate: f64,
+    pub pass_at_k: f64,
+    pub clear_composite: f64,
+    #[serde(default)]
+    pub perf: PerfScores,
+}
 
 /// Compute aggregate CLEAR + progress scores for a run from its task results.
 ///

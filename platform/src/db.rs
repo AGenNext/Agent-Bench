@@ -17,8 +17,11 @@ use tokio::sync::Mutex;
 
 use crate::domain::{Agent, Benchmark, LeaderboardEntry, Run, SubmitRun};
 use crate::error::{AppError, AppResult};
-use crate::metrics::clear::ClearWeights;
-use crate::scoring::{improvement_areas, score_run};
+use crate::evaluation::{
+    assign_level, default_attribute_grade, default_improvement_areas, default_passed,
+    salesforce_agentic_levels, AttributeRef, AttributeScore, BenchmarkRef, EntityRef, MetricScore,
+    MetricSpec, ProtocolRef,
+};
 
 /// Ordered migrations embedded into the binary.
 const MIGRATIONS: &[(&str, &str)] = &[
@@ -27,7 +30,57 @@ const MIGRATIONS: &[(&str, &str)] = &[
         "0002_multi_hardware",
         include_str!("../migrations/0002_multi_hardware.surql"),
     ),
+    (
+        "0003_generic_score",
+        include_str!("../migrations/0003_generic_score.surql"),
+    ),
 ];
+
+/// Parse a protocol label `key@version` into a [`ProtocolRef`].
+fn protocol_ref(label: &str) -> ProtocolRef {
+    match label.split_once('@') {
+        Some((key, version)) => ProtocolRef { key: key.into(), version: version.into() },
+        None => ProtocolRef { key: label.into(), version: String::new() },
+    }
+}
+
+/// Build a generic [`AttributeScore`] from submitted metric values + thresholds.
+/// This is the whole of Bench's "scoring": no formula is computed here.
+fn score_attribute(entity: EntityRef, req: &SubmitRun) -> AttributeScore {
+    let metric_scores: Vec<MetricScore> = req
+        .metrics
+        .iter()
+        .map(|m| {
+            let spec = MetricSpec {
+                key: m.key.clone(),
+                direction: m.direction,
+                // Reference the canonical definition; never inline a formula.
+                formula: Some(format!("agent-metrics:{}", m.key)),
+                threshold: m.threshold.clone(),
+                weight: m.weight,
+            };
+            MetricScore::from_spec(&spec, m.value, m.normalized_score)
+        })
+        .collect();
+
+    let grade = default_attribute_grade(&metric_scores);
+    let level = assign_level(grade, &salesforce_agentic_levels())
+        .map(|(lvl, name)| format!("L{lvl} {name}"));
+
+    AttributeScore {
+        entity,
+        attribute: AttributeRef { key: req.attribute.clone(), name: None },
+        protocol: protocol_ref(&req.protocol),
+        benchmark: BenchmarkRef { key: req.benchmark_id.clone(), version: String::new() },
+        passed: default_passed(&metric_scores),
+        improvement_areas: default_improvement_areas(&metric_scores),
+        grade,
+        confidence: None,
+        confidence_band: None,
+        level,
+        metric_scores,
+    }
+}
 
 const DB_NAME: &str = "main";
 
@@ -212,14 +265,21 @@ impl Store {
 
     // ---- runs -------------------------------------------------------------
 
-    /// Submit a run: score it with the metrics engine and persist the result.
+    /// Submit a run: turn measured metric values + protocol thresholds into a
+    /// generic `AttributeScore` and persist it. No metric formula is computed.
     pub async fn submit_run(&self, tenant: &str, req: SubmitRun) -> AppResult<Run> {
-        let scores = score_run(&req.results, ClearWeights::default());
+        let entity = EntityRef {
+            id: req.agent_id.clone(),
+            entity_type: "agent".into(),
+            name: None,
+            version: None,
+        };
+        let score = score_attribute(entity, &req);
 
         let _g = self.lock.lock().await;
         self.enter_tenant(tenant).await?;
 
-        let scores_json = serde_json::to_value(&scores)
+        let score_json = serde_json::to_value(&score)
             .map_err(|e| AppError::BadRequest(e.to_string()))?;
 
         let created: Vec<serde_json::Value> = self
@@ -227,16 +287,19 @@ impl Store {
             .query(
                 "CREATE run SET agent = type::thing('agent', $agent), \
                  benchmark = type::thing('benchmark', $bench), \
-                 hardware = $hardware, dsl = $dsl, \
-                 status = 'scored', trials = $trials, scores = $scores \
+                 hardware = $hardware, dsl = $dsl, attribute = $attribute, \
+                 protocol = $protocol, status = 'scored', trials = $trials, \
+                 score = $score \
                  RETURN record::id(id) AS id",
             )
             .bind(("agent", req.agent_id.clone()))
             .bind(("bench", req.benchmark_id.clone()))
             .bind(("hardware", req.hardware.clone()))
             .bind(("dsl", req.dsl.clone()))
+            .bind(("attribute", req.attribute.clone()))
+            .bind(("protocol", req.protocol.clone()))
             .bind(("trials", req.trials))
-            .bind(("scores", scores_json))
+            .bind(("score", score_json))
             .await?
             .take(0)?;
 
@@ -254,7 +317,7 @@ impl Store {
             dsl: req.dsl,
             status: "scored".into(),
             trials: req.trials,
-            scores,
+            score,
         })
     }
 
@@ -279,7 +342,7 @@ impl Store {
         };
         let sql = format!(
             "SELECT agent.name AS agent_name, agent.scaffold AS scaffold, \
-             record::id(agent) AS agent_id, hardware, dsl, scores \
+             record::id(agent) AS agent_id, hardware, dsl, score \
              FROM run \
              WHERE benchmark.benchmark_id = $bid AND status = 'scored'{hw_filter}"
         );
@@ -292,9 +355,10 @@ impl Store {
         let mut entries: Vec<LeaderboardEntry> = rows
             .into_iter()
             .map(|v| {
-                let scores = v.get("scores").cloned().unwrap_or_default();
-                let run_scores: crate::domain::RunScores =
-                    serde_json::from_value(scores).unwrap_or_default();
+                let score: Option<AttributeScore> = v
+                    .get("score")
+                    .cloned()
+                    .and_then(|s| serde_json::from_value(s).ok());
                 LeaderboardEntry {
                     rank: 0,
                     agent_id: v
@@ -314,22 +378,20 @@ impl Store {
                         .to_string(),
                     hardware: v.get("hardware").and_then(|s| s.as_str()).unwrap_or("").to_string(),
                     dsl: v.get("dsl").and_then(|s| s.as_str()).unwrap_or("").to_string(),
-                    efficacy: run_scores.clear.efficacy,
-                    cna: run_scores.clear.cna,
-                    clear_composite: run_scores.clear_composite,
-                    speedup_geomean: run_scores.perf.speedup_geomean,
-                    correctness: run_scores.perf.correctness,
-                    improvement_areas: improvement_areas(&run_scores, 0.7),
+                    grade: score.as_ref().map(|s| s.grade).unwrap_or(0.0),
+                    passed: score.as_ref().map(|s| s.passed).unwrap_or(false),
+                    level: score.as_ref().and_then(|s| s.level.clone()),
+                    improvement_areas: score.map(|s| s.improvement_areas).unwrap_or_default(),
                 }
             })
             .collect();
 
-        // Rank by composite score (desc); ties broken by efficacy.
+        // Rank by the generic attribute grade (desc); ties broken by pass status.
         entries.sort_by(|a, b| {
-            b.clear_composite
-                .partial_cmp(&a.clear_composite)
+            b.grade
+                .partial_cmp(&a.grade)
                 .unwrap()
-                .then(b.efficacy.partial_cmp(&a.efficacy).unwrap())
+                .then(b.passed.cmp(&a.passed))
         });
         for (i, e) in entries.iter_mut().enumerate() {
             e.rank = (i + 1) as u32;

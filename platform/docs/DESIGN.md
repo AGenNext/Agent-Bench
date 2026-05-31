@@ -51,11 +51,7 @@ implementing file.
 | **Memory comparison** (`compare()`) | rank frameworks on memory | how good vs. others / gap-to-leader | `FrameworkMemory[]` (Agent-Memory, Mem0, Zep, Letta) | `MemoryThresholds` | `MemoryComparison` (ranking, per-metric leader, focal next-level) |
 | **Trajectory attribute** (`src/attributes/trajectory.rs`) | score the execution path, not just the final answer | how good is the trajectory / what to fix | `TrajectoryInput` (tool calls, steps, plan, actions) | `TrajectoryThresholds` (TRAJ-001) | `TrajectoryVerdict` (tool-call accuracy, step efficiency, plan adherence, grounding) |
 | **Judge** (`src/judge.rs`) | LLM-as-a-judge interface (pointwise/pairwise) | quality vs. natural-language criteria | output(s) + criteria | a judge model (runtime) | score / ordering — `DeterministicJudge` stub offline; real impl wraps an LLM |
-| **CLEAR** (`src/metrics/clear.rs`) | cost/latency/efficacy/assurance/reliability | quality across dimensions | `TaskObservation[]` | thresholds + weights | `ClearScores` (CNA, CPS, SCR, PAS), `pass_at_k`, composite |
-| **Ranking** (`src/metrics/ranking.rs`) | rank fidelity + cost reduction | how stable is the ranking / which tasks suffice | predicted/actual scores; task pass-rates | mid-range band `[0.30,0.70]` | Spearman ρ, Kendall τ, selected task set |
-| **Progress** (`src/metrics/progress.rs`) | incremental task advancement | how far did it get | matching scores / subgoals; actions | — | progress rate, success rate, grounding accuracy |
-| **Perf** (`src/metrics/perf.rs`) | multi-hardware kernel/codegen perf | how fast + correct | `PerfObservation[]` (correct, baseline vs kernel latency) | per-hardware target | `PerfScores` (correctness, geomean speedup, `fast_p`) |
-| **Scoring** (`src/scoring.rs`) | aggregate a run | run-level answer | `TaskResult[]` | `ClearWeights` | `RunScores` + `improvement_areas()` |
+| **Generic metamodel** (`src/evaluation.rs`) | turn supplied metric *values* + protocol thresholds into a result — **no formula is computed here** | both questions, generically | `MetricScore[]` (values + `Threshold`s) | the protocol's `MetricSpec[]` + `LevelBand`s | `AttributeScore` (grade, passed, `improvement_areas`, level) |
 | **Card update** (`src/card.rs`) | write results + **documented test conditions** to the subject's card | "tested under *these conditions* → *this result*" | a verdict + subject DID + `TestConditions` (protocol@v, dataset, sample size, trials, hardware/dsl, evaluator version) | registry card schema | `CardEval` (conditions + grade + metrics + improvement areas) + `as_card_patch()` keyed by attribute |
 
 ### Service layer (`server` feature)
@@ -63,11 +59,11 @@ implementing file.
 | Component | Means | Answers | Input | Protocol | Output |
 |---|---|---|---|---|---|
 | **API** (`src/api.rs`) | HTTP surface | serves the two questions | JSON requests + `X-Tenant` header | REST over `/v1/*` | JSON responses |
-| **Run submission** (`POST /v1/runs`) | record + score a run | how good (this run) | `SubmitRun {agent_id, benchmark_id, hardware, dsl, trials, results[]}` | the benchmark | `Run {status: scored, scores}` |
-| **Leaderboard** (`GET /v1/leaderboard/:id`) | rank agents | how good vs. others / what to improve | benchmark id `[?hardware=…]` | the benchmark | `LeaderboardEntry[]` (rank, scores, `improvement_areas`) |
-| **Store** (`src/db.rs`) | multi-tenant persistence + enforcement | — | domain objects | SurrealQL schema (`migrations/*.surql`); namespace-per-tenant | persisted records |
+| **Run submission** (`POST /v1/runs`) | record + score a run | how good (this run) | `SubmitRun {agent_id, benchmark_id, attribute, protocol, hardware, dsl, trials, metrics[]}` — `metrics` are measured values + `Threshold`s | the protocol | `Run {status: scored, score: AttributeScore}` |
+| **Leaderboard** (`GET /v1/leaderboard/:id`) | rank agents | how good vs. others / what to improve | benchmark id `[?hardware=…]` | the benchmark | `LeaderboardEntry[]` (rank, `grade`, `passed`, `level`, `improvement_areas`) — ranked on the generic grade |
+| **Store** (`src/db.rs`) | multi-tenant persistence + builds `AttributeScore` from values+thresholds | — | domain objects | SurrealQL schema (`migrations/*.surql`); namespace-per-tenant | persisted records |
 | **Tenancy** (`src/tenancy.rs`) | resolve tenant → namespace | — | `X-Tenant` header | `[A-Za-z0-9_-]` | `Tenant` |
-| **ML** (`src/ml.rs`, `surrealml`) | readiness prediction | how good (composite) | `RunScores` | SurrealML `ml::*` | readiness score |
+| **ML** (`src/ml.rs`, `surrealml`) | readiness prediction | how good (composite) | `AttributeScore` (grade + confidence) | SurrealML `ml::*` | readiness score |
 
 ### Schemas & references
 
@@ -107,8 +103,8 @@ FrameworkMemory[]   ──compare()──►  MemoryComparison
 | | |
 |---|---|
 | **Inputs** | agents/frameworks; per-task or per-query results; hardware/DSL; cold-start + dep counts |
-| **Protocols** | supplied per attribute — `AMB-001` (memory), benchmark thresholds (`pass_thresholds` in YAML), `MemoryThresholds`, `ClearWeights`, mid-range band |
-| **Outputs** | `MemoryVerdict`, `MemoryComparison`, `RunScores`, `LeaderboardEntry[]` — all reducing to **rank/grade + improvement areas** |
+| **Protocols** | supplied per attribute — `AMB-001` (memory), `TRAJ-001` (trajectory), benchmark thresholds (`pass_thresholds` in YAML), `MemoryThresholds`, `MetricSpec[]` + `Threshold`s |
+| **Outputs** | `AttributeScore`, `MemoryVerdict`, `MemoryComparison`, `LeaderboardEntry[]` — all reducing to **rank/grade + improvement areas** |
 
 ## Proposing corrections & improvements
 
@@ -149,4 +145,4 @@ green, io-impact accurate, protocol versioned if meaning changed.
 
 | Built (tested) | Schema only / planned |
 |---|---|
-| scoring engine (CLEAR, ranking, progress, perf), memory attribute + comparison, multi-tenant API, SurrealDB `any`-engine store, migrations, multi-hardware leaderboard, deploy manifests — **22 lib + 3 e2e tests** | other attributes (runtime, tools, rules, skills); signed result-package attestation; remote ClickHouse/telemetry |
+| generic metamodel (values+thresholds → `AttributeScore`), memory + trajectory attributes, metric *references* to Agent-Metrics, multi-tenant API, SurrealDB `any`-engine store, migrations, grade-ranked multi-hardware leaderboard, deploy manifests — **21 lib + 3 e2e + 2 metamodel + 4 schema tests** | other attributes (runtime, tools, rules, skills); signed result-package attestation; remote ClickHouse/telemetry |
