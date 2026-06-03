@@ -62,3 +62,25 @@ DEFINE FIELD started_at  ON run TYPE option<datetime>;
 DEFINE FIELD ended_at    ON run TYPE option<datetime>;
 DEFINE FIELD created_at   ON run TYPE datetime VALUE time::now();
 DEFINE INDEX run_phase ON run FIELDS phase;
+
+-- -----------------------------------------------------------------------------
+-- Workload kind: the open set, as data not code. "Anything" — seeded with the
+-- known kinds; new kinds are rows, never a schema change.
+-- -----------------------------------------------------------------------------
+DEFINE TABLE workload_kind SCHEMAFULL;
+DEFINE FIELD key  ON workload_kind TYPE string;
+DEFINE FIELD does ON workload_kind TYPE string;   -- what the container does
+DEFINE INDEX workload_kind_key ON workload_kind FIELDS key UNIQUE;
+
+UPSERT workload_kind:research         SET key='research',         does='run a research harness, produce a cited report';
+UPSERT workload_kind:bench            SET key='bench',            does='replay a benchmark suite for a subject';
+UPSERT workload_kind:`create-agent`   SET key='create-agent',    does='synthesize/assemble an agent into the registry';
+UPSERT workload_kind:`improve-quality` SET key='improve-quality', does='run an improvement loop on a subject';
+
+-- -----------------------------------------------------------------------------
+-- Graph relations (crawl/construct) — mirrors metamodel.surql.
+-- -----------------------------------------------------------------------------
+DEFINE TABLE has_kind     TYPE RELATION FROM workload TO workload_kind;
+DEFINE TABLE placed_on    TYPE RELATION FROM run      TO cluster;
+DEFINE TABLE orchestrates TYPE RELATION FROM workload TO run;
+DEFINE TABLE constrained_by TYPE RELATION FROM workload TO placement;
