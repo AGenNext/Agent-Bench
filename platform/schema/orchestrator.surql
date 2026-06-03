@@ -36,7 +36,7 @@ DEFINE FIELD max_retries ON placement TYPE int DEFAULT 3;
 -- -----------------------------------------------------------------------------
 DEFINE TABLE workload SCHEMAFULL;
 DEFINE FIELD kind      ON workload TYPE string;            -- research | bench | create-agent | improve-quality | …
-DEFINE FIELD subject   ON workload TYPE record<subject>;   -- acted on / measured
+DEFINE FIELD subject   ON workload TYPE record<entity>;    -- acted on / measured (metamodel entity)
 DEFINE FIELD protocol  ON workload TYPE record<protocol>;  -- supplied metric set + thresholds (input)
 DEFINE FIELD image     ON workload TYPE string             -- OCI ref @ digest (cloud-agnostic)
     ASSERT $value != NONE AND string::len($value) > 0;
@@ -56,8 +56,8 @@ DEFINE FIELD phase    ON run TYPE string DEFAULT 'pending'  -- pending | placed 
     ASSERT $value IN ['pending','placed','running','succeeded','failed','rescheduled'];
 DEFINE FIELD attempt   ON run TYPE int DEFAULT 0;
 DEFINE FIELD handle     ON run TYPE option<string>;         -- backend job handle
-DEFINE FIELD observation ON run TYPE option<record<observation>>;  -- measured values (metamodel)
-DEFINE FIELD score      ON run TYPE option<record<score>>;         -- generic verdict (metamodel)
+DEFINE FIELD observation ON run TYPE option<object>;                    -- measured metric values (no formula here)
+DEFINE FIELD score      ON run TYPE option<record<attribute_score>>;    -- generic verdict (metamodel)
 DEFINE FIELD started_at  ON run TYPE option<datetime>;
 DEFINE FIELD ended_at    ON run TYPE option<datetime>;
 DEFINE FIELD created_at   ON run TYPE datetime VALUE time::now();

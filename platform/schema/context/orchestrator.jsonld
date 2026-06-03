@@ -32,7 +32,7 @@
     "attempt": "ab:attempt",
     "handle": "ab:handle",
     "observation": "ab:observation",
-    "score": "schema:ratingValue",
+    "score": { "@id": "ab:score", "@type": "@id" },
     "startedAt": { "@id": "schema:startTime", "@type": "schema:DateTime" },
     "endedAt": { "@id": "schema:endTime", "@type": "schema:DateTime" },
     "createdAt": { "@id": "schema:dateCreated", "@type": "schema:DateTime" }
