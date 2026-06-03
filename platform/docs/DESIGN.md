@@ -73,6 +73,7 @@ implementing file.
 | **AMB-001** (`benchmarks/memory/AMB-001-benchmark.yaml`) | the memory protocol | metrics + thresholds for memory | benchmark YAML |
 | **Metric references** (`platform/schema/metrics.surql`) | `metric_ref` manifest — metric ids only, no formulas | which Agent-Metrics definitions Bench consumes (`agent-metrics:<key>@<version>`) | SurrealQL `UPSERT` |
 | **Reference library** (`benchmarks/reference/`) | reading notes on external frameworks | context for the metrics Bench references | markdown |
+| **External tools** (`tools/`) | registered measurement sources (e.g. [OpenCompass](../../tools/opencompass.md)) + the `opencompass` Claude skill | runners that *produce* metric values Bench ingests via `SubmitRun` | markdown + `SKILL.md` |
 
 > **Definition boundary.** Agent-Bench measures and reports; it does **not**
 > define metrics. Canonical formulas/grammar live in **Agent-Metrics**
