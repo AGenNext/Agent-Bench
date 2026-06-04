@@ -3,10 +3,10 @@
 # Fixes the CrashLoopBackOff seen with `replicas: 3` of `surrealdb:latest`:
 #   1. The image entrypoint needs an explicit `start ...` command with bind
 #      address + root auth, or the container exits immediately.
-#   2. A single SurrealKV/RocksDB store is SINGLE-NODE. You cannot run 3
-#      replicas over one RWO volume — they crashloop. Use ONE replica with a
-#      persistent volume (below), or a distributed TiKV backend for HA
-#      (see the commented block at the bottom).
+#   2. A single RocksDB store is SINGLE-NODE. You cannot run 3 replicas over one
+#      RWO volume — they crashloop. Use ONE replica with a persistent volume
+#      (below). For HA use SurrealDB Cloud Dedicated, or SurrealDS (the
+#      distributed storage tier) when it ships — NOT a self-managed KV cluster.
 #
 # This manifest runs a single durable node — correct for getting green first.
 ---
@@ -57,13 +57,15 @@ spec:
         - name: surrealdb
           image: surrealdb/surrealdb:v2.1.4   # pin, don't use :latest
           # The fix: an explicit start command with bind + auth + storage path.
+          # RocksDB is the recommended on-disk server engine (SurrealKV is beta,
+          # aimed at embedded/local-first; the platform binary uses it embedded).
           args:
             - start
             - --bind=0.0.0.0:8000
             - --user=$(SURREAL_USER)
             - --pass=$(SURREAL_PASS)
             - --log=info
-            - surrealkv://data/agentbench.db
+            - rocksdb://data/agentbench.db
           env:
             - name: SURREAL_USER
               valueFrom: { secretKeyRef: { name: surrealdb-auth, key: user } }
@@ -100,16 +102,16 @@ spec:
     - { name: http, port: 8000, targetPort: 8000 }
 
 # --------------------------------------------------------------------------
-# HA option (replaces the StatefulSet above): SurrealDB over a distributed
-# TiKV backend. Only then can you run multiple stateless SurrealDB replicas.
+# HA option: SurrealDB separates compute (query nodes) from storage. For an
+# HA, horizontally scalable store, run query nodes against a distributed
+# storage tier so the dataset no longer lives on a single node:
 #
-#   args:
-#     - start
-#     - --bind=0.0.0.0:8000
-#     - --user=$(SURREAL_USER)
-#     - --pass=$(SURREAL_PASS)
-#     - tikv://pd-service:2379          # distributed KV; supports N replicas
+#   - SurrealDB Cloud (Dedicated) — managed multi-node HA today; point the
+#     platform at its endpoint via AGENTBENCH_DB_URL (no in-cluster StatefulSet).
+#   - SurrealDS — the self-hosted distributed transactional storage layer
+#     (Enterprise, coming soon). When it ships, query nodes become a stateless
+#     Deployment (replicas: N) over shared SurrealDS storage.
 #
-# Deploy TiKV/PD via the tidb-operator, then SurrealDB becomes a stateless
-# Deployment with replicas: 3 fronted by this Service.
+# Until then this single durable RocksDB node is the supported self-hosted path;
+# back it up at the filesystem level. (See manage/deployment.)
 # --------------------------------------------------------------------------
