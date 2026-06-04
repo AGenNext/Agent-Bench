@@ -17,7 +17,7 @@ DEFINE FIELD provider ON cluster TYPE string;     -- eks | gke | aks | k3s | doc
 DEFINE FIELD region   ON cluster TYPE string;
 DEFINE FIELD endpoint ON cluster TYPE string;     -- kube-api / runtime endpoint
 DEFINE FIELD healthy  ON cluster TYPE bool DEFAULT true;
-DEFINE FIELD capacity ON cluster TYPE option<object>;  -- {cpu, mem} advertised
+DEFINE FIELD capacity ON cluster FLEXIBLE TYPE option<object>;  -- {cpu, mem} advertised
 DEFINE INDEX cluster_name ON cluster FIELDS name UNIQUE;
 
 -- -----------------------------------------------------------------------------
@@ -40,9 +40,9 @@ DEFINE FIELD subject   ON workload TYPE record<entity>;    -- acted on / measure
 DEFINE FIELD protocol  ON workload TYPE record<protocol>;  -- supplied metric set + thresholds (input)
 DEFINE FIELD image     ON workload TYPE string             -- OCI ref @ digest (cloud-agnostic)
     ASSERT $value != NONE AND string::len($value) > 0;
-DEFINE FIELD inputs    ON workload TYPE object DEFAULT {};  -- kind-specific payload
+DEFINE FIELD inputs    ON workload FLEXIBLE TYPE object DEFAULT {};  -- kind-specific payload (self-describing)
 DEFINE FIELD placement ON workload TYPE record<placement>;
-DEFINE FIELD budget    ON workload TYPE option<object>;     -- {cpu, mem, wall, cost}
+DEFINE FIELD budget    ON workload FLEXIBLE TYPE option<object>;     -- {cpu, mem, wall, cost}
 DEFINE FIELD created_at ON workload TYPE datetime VALUE time::now();
 
 -- -----------------------------------------------------------------------------
@@ -56,7 +56,7 @@ DEFINE FIELD phase    ON run TYPE string DEFAULT 'pending'  -- pending | placed 
     ASSERT $value IN ['pending','placed','running','succeeded','failed','rescheduled'];
 DEFINE FIELD attempt   ON run TYPE int DEFAULT 0;
 DEFINE FIELD handle     ON run TYPE option<string>;         -- backend job handle
-DEFINE FIELD observation ON run TYPE option<object>;                    -- measured metric values (no formula here)
+DEFINE FIELD observation ON run FLEXIBLE TYPE option<object>;           -- measured metric values, protocol-keyed (no formula here)
 DEFINE FIELD score      ON run TYPE option<record<attribute_score>>;    -- generic verdict (metamodel)
 DEFINE FIELD started_at  ON run TYPE option<datetime>;
 DEFINE FIELD ended_at    ON run TYPE option<datetime>;

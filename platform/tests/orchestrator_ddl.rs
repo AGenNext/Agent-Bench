@@ -64,6 +64,12 @@ async fn bench_on_gemini_omni_round_trips() {
     assert_eq!(rows[0]["subject"], "Gemini Omni");
     assert_eq!(rows[0]["protocol"], "OMNI-001");
 
+    // Embedded inputs (self-describing, FLEXIBLE) keep their nested keys.
+    let turns: Option<i64> = db
+        .query("SELECT VALUE inputs.turns FROM workload:`bench-gemini-omni`")
+        .await.unwrap().take(0).unwrap();
+    assert_eq!(turns, Some(8));
+
     // Protocol references metrics with thresholds — no formula stored here.
     let metric_count: Option<i64> = db
         .query("SELECT VALUE array::len(metrics) FROM protocol:`OMNI-001:1`")
@@ -119,6 +125,13 @@ async fn run_carries_telemetry_and_trace() {
     let tid: Option<String> = db
         .query("SELECT VALUE trace_id FROM run:r1").await.unwrap().take(0).unwrap();
     assert_eq!(tid.as_deref(), Some("0af7651916cd43dd8448eb211c80319c"));
+
+    // Embedded observation keeps its nested, protocol-keyed values (FLEXIBLE) —
+    // not silently flattened to {}.
+    let fidelity: Option<f64> = db
+        .query("SELECT VALUE observation.cross_modal_fidelity FROM run:r1")
+        .await.unwrap().take(0).unwrap();
+    assert_eq!(fidelity, Some(0.84));
 
     // Spans are queryable per run (Metrics plane).
     let span_name: Vec<String> = db
