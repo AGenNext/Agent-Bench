@@ -9,6 +9,7 @@ use surrealdb::engine::any::connect;
 const METAMODEL: &str = include_str!("../schema/metamodel.surql");
 const ORCHESTRATOR: &str = include_str!("../schema/orchestrator.surql");
 const SEED_OMNI: &str = include_str!("../schema/seed/gemini-omni.surql");
+const SEED_CLUSTERS: &str = include_str!("../schema/seed/clusters.surql");
 
 async fn fresh() -> surrealdb::Surreal<surrealdb::engine::any::Any> {
     let db = connect("memory").await.unwrap();
@@ -74,6 +75,28 @@ async fn bench_on_gemini_omni_round_trips() {
         .query("SELECT VALUE out.key FROM has_kind WHERE in = workload:`bench-gemini-omni`")
         .await.unwrap().take(0).unwrap();
     assert_eq!(kind, vec!["bench".to_string()]);
+}
+
+#[tokio::test]
+async fn multi_cloud_registry_is_data() {
+    let db = fresh().await;
+    db.query(METAMODEL).await.unwrap().check().unwrap();
+    db.query(ORCHESTRATOR).await.unwrap().check().unwrap();
+    db.query(SEED_CLUSTERS).await.expect("clusters.surql executes").check().expect("no errors");
+
+    // Adding a cloud is a row, not code — providers span the self-hosted matrix.
+    let providers: Vec<String> = db
+        .query("SELECT VALUE provider FROM cluster ORDER BY provider").await.unwrap().take(0).unwrap();
+    for p in ["aks", "eks", "gke", "kind"] {
+        assert!(providers.contains(&p.to_string()), "missing provider {p}");
+    }
+
+    // A cluster's trust is the conformance checks it is proven_by (crawlable).
+    let proofs: Vec<String> = db
+        .query("SELECT VALUE out.key FROM proven_by WHERE in = cluster:`eks-us-east-1` ORDER BY out.key")
+        .await.unwrap().take(0).unwrap();
+    assert!(proofs.contains(&"pvc-bind".to_string()));
+    assert!(proofs.contains(&"manifest-apply".to_string()));
 }
 
 #[tokio::test]
