@@ -75,3 +75,51 @@ async fn bench_on_gemini_omni_round_trips() {
         .await.unwrap().take(0).unwrap();
     assert_eq!(kind, vec!["bench".to_string()]);
 }
+
+#[tokio::test]
+async fn run_carries_telemetry_and_trace() {
+    let db = fresh().await;
+    db.query(METAMODEL).await.unwrap().check().unwrap();
+    db.query(ORCHESTRATOR).await.unwrap().check().unwrap();
+    db.query(SEED_OMNI).await.unwrap().check().unwrap();
+
+    // A reconciled run with an OpenTelemetry trace id + a span.
+    db.query(
+        "CREATE run:r1 SET workload=workload:`bench-gemini-omni`, phase='running', \
+            attempt=1, trace_id='0af7651916cd43dd8448eb211c80319c', observation={ cross_modal_fidelity: 0.84 };
+         CREATE span:sp1 SET run=run:r1, name='execute', phase='running', \
+            attrs={ image_pull_ms: 1200 }, started_at=time::now();
+         RELATE run:r1->traced_by->span:sp1;",
+    ).await.unwrap().check().unwrap();
+
+    // Telemetry joins by trace id.
+    let tid: Option<String> = db
+        .query("SELECT VALUE trace_id FROM run:r1").await.unwrap().take(0).unwrap();
+    assert_eq!(tid.as_deref(), Some("0af7651916cd43dd8448eb211c80319c"));
+
+    // Spans are queryable per run (Metrics plane).
+    let span_name: Vec<String> = db
+        .query("SELECT VALUE name FROM span WHERE run = run:r1").await.unwrap().take(0).unwrap();
+    assert_eq!(span_name, vec!["execute".to_string()]);
+}
+
+#[tokio::test]
+async fn workload_embedding_is_vector_searchable() {
+    let db = fresh().await;
+    db.query(METAMODEL).await.unwrap().check().unwrap();
+    db.query(ORCHESTRATOR).await.unwrap().check().unwrap();
+    db.query(SEED_OMNI).await.unwrap().check().unwrap();
+
+    // Provider-supplied embedding (dim 1536) stored on the workload.
+    db.query(
+        "UPDATE workload:`bench-gemini-omni` SET embedding = array::repeat(0.01, 1536);",
+    ).await.unwrap().check().unwrap();
+
+    // KNN vector query resolves against the MTREE index — "find runs like this".
+    let hits: Vec<String> = db
+        .query(
+            "LET $q = array::repeat(0.01, 1536); \
+             SELECT VALUE id.id() FROM workload WHERE embedding <|1,COSINE|> $q;",
+        ).await.unwrap().take(1).unwrap();
+    assert!(hits.contains(&"bench-gemini-omni".to_string()));
+}

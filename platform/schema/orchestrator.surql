@@ -61,7 +61,27 @@ DEFINE FIELD score      ON run TYPE option<record<attribute_score>>;    -- gener
 DEFINE FIELD started_at  ON run TYPE option<datetime>;
 DEFINE FIELD ended_at    ON run TYPE option<datetime>;
 DEFINE FIELD created_at   ON run TYPE datetime VALUE time::now();
+-- Observability: correlate a run to its distributed trace (OpenTelemetry).
+-- SurrealDB emits its own metrics/traces; the control plane carries the trace
+-- id so a run's telemetry joins the workload's. (manage/observability)
+DEFINE FIELD trace_id   ON run TYPE option<string>;
+DEFINE FIELD span_id    ON run TYPE option<string>;
 DEFINE INDEX run_phase ON run FIELDS phase;
+DEFINE INDEX run_trace ON run FIELDS trace_id;
+
+-- -----------------------------------------------------------------------------
+-- Span: per-run telemetry samples (OTLP-shaped) the orchestrator records while
+-- reconciling. Observation values land on `run`; raw timing/measurement points
+-- land here, queryable for the Metrics plane.
+-- -----------------------------------------------------------------------------
+DEFINE TABLE span SCHEMAFULL;
+DEFINE FIELD run     ON span TYPE record<run>;
+DEFINE FIELD name    ON span TYPE string;          -- e.g. 'submit', 'pull-image', 'execute', 'collect'
+DEFINE FIELD phase   ON span TYPE option<string>;
+DEFINE FIELD attrs   ON span FLEXIBLE TYPE option<object>;   -- OTLP attributes
+DEFINE FIELD started_at ON span TYPE datetime;
+DEFINE FIELD ended_at   ON span TYPE option<datetime>;
+DEFINE INDEX span_run ON span FIELDS run;
 
 -- -----------------------------------------------------------------------------
 -- Workload kind: the open set, as data not code. "Anything" — seeded with the
@@ -110,3 +130,14 @@ DEFINE TABLE orchestrates TYPE RELATION FROM workload TO run;
 DEFINE TABLE constrained_by TYPE RELATION FROM workload TO placement;
 -- a cluster is proven by the conformance checks it passes (gates cluster.healthy)
 DEFINE TABLE proven_by   TYPE RELATION FROM cluster  TO conformance_check;
+-- a run records spans (telemetry) — graph edge for crawl
+DEFINE TABLE traced_by   TYPE RELATION FROM run      TO span;
+
+-- -----------------------------------------------------------------------------
+-- Semantic search: an embedding of a workload's intent (kind + inputs + subject)
+-- so "find runs like this" / "which subjects were benched for X" is a vector
+-- query, not a keyword scan. The vector is supplied by an embeddings provider
+-- (Mistral/OpenAI/Ollama — see embeddings-providers); Bench stores + indexes it.
+-- -----------------------------------------------------------------------------
+DEFINE FIELD embedding ON workload TYPE option<array<float>>;   -- provider-supplied vector
+DEFINE INDEX workload_vec ON workload FIELDS embedding MTREE DIMENSION 1536 DIST COSINE;
