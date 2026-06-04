@@ -32,7 +32,7 @@ DEFINE TABLE protocol SCHEMAFULL;
 DEFINE FIELD key       ON protocol TYPE string;
 DEFINE FIELD version   ON protocol TYPE string;
 DEFINE FIELD attribute ON protocol TYPE option<string>;     -- attribute key
-DEFINE FIELD metrics   ON protocol TYPE option<array>;      -- MetricSpec[]
+DEFINE FIELD metrics   ON protocol FLEXIBLE TYPE option<array>;      -- MetricSpec[] (nested threshold objects)
 DEFINE INDEX protocol_label ON protocol FIELDS key, version UNIQUE;
 
 -- --- Benchmark: supplies tasks/fixtures/datasets/measurements ---------------
