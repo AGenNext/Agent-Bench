@@ -52,3 +52,12 @@ DEFINE INDEX result_package_subject ON result_package FIELDS subject;
 DEFINE TABLE packaged_as  TYPE RELATION FROM run            TO result_package;
 DEFINE TABLE reproduced_by TYPE RELATION FROM result_package TO repro_manifest;
 DEFINE TABLE published    TYPE RELATION FROM result_package TO entity;  -- package -> subject, when public
+
+-- -----------------------------------------------------------------------------
+-- Leaderboard provenance: a ranked row must trace to the public, reproducible
+-- package that earned it — no orphan scores on a board. We add the provenance
+-- field to the metamodel's leaderboard_row here (in the output layer) rather
+-- than editing the shared metamodel, and relate the two for crawl.
+-- -----------------------------------------------------------------------------
+DEFINE FIELD from_package ON leaderboard_row TYPE option<record<result_package>>;
+DEFINE TABLE ranks TYPE RELATION FROM result_package TO leaderboard_row;

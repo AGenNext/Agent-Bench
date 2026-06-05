@@ -83,6 +83,40 @@ async fn run_packages_into_reproducible_artifact() {
 }
 
 #[tokio::test]
+async fn leaderboard_entry_traces_to_package() {
+    let db = loaded().await;
+
+    // A public package earns a ranked leaderboard row that traces back to it.
+    db.query(
+        "CREATE attribute_score:sc SET entity=entity:`gemini-omni`, attribute=attribute:`multimodal`, \
+             protocol=protocol:`OMNI-001:1`, benchmark=benchmark:omni, metric_scores=[], grade=0.84, passed=true;
+         CREATE run:rp SET workload=workload:`bench-gemini-omni`, phase='succeeded', score=attribute_score:sc;
+         CREATE repro_manifest:m1 SET image_digest='sha256:00', protocol=protocol:`OMNI-001:1`, inputs_hash='h', trials=3;
+         CREATE result_package:pkg SET subject=entity:`gemini-omni`, run=run:rp, score=attribute_score:sc, \
+             manifest=repro_manifest:m1, digest='sha256:dd', visibility='public', published_at=time::now();
+         CREATE leaderboard_row:lr SET leaderboard_id='OMNI-001', rank=1, entity=entity:`gemini-omni`, \
+             attribute_key='multimodal', protocol=protocol:`OMNI-001:1`, benchmark=benchmark:omni, \
+             score=0.84, primary_metric='cross_modal_fidelity', passed=true, from_package=result_package:pkg;
+         RELATE result_package:pkg->ranks->leaderboard_row:lr;",
+    ).await.unwrap().check().unwrap();
+
+    // The ranked row points back to a public, reproducible package — no orphans.
+    let prov: Vec<serde_json::Value> = db
+        .query("SELECT from_package.digest AS digest, from_package.visibility AS vis, \
+                from_package.manifest.trials AS trials FROM leaderboard_row:lr")
+        .await.unwrap().take(0).unwrap();
+    assert_eq!(prov[0]["digest"], "sha256:dd");
+    assert_eq!(prov[0]["vis"], "public");
+    assert_eq!(prov[0]["trials"], 3);
+
+    // Graph crawl: package -> the rows it ranks in.
+    let ranked: Vec<i64> = db
+        .query("SELECT VALUE out.rank FROM ranks WHERE in = result_package:pkg")
+        .await.unwrap().take(0).unwrap();
+    assert_eq!(ranked, vec![1]);
+}
+
+#[tokio::test]
 async fn package_digest_is_unique() {
     let db = loaded().await;
     db.query(
