@@ -1,0 +1,28 @@
+{
+  "@context": {
+    "schema": "https://schema.org/",
+    "ab": "https://agent-bench.dev/ns#",
+
+    "ResultPackage": "ab:ResultPackage",
+    "subject": { "@id": "schema:about", "@type": "@id" },
+    "run": { "@id": "ab:run", "@type": "@id" },
+    "score": { "@id": "ab:score", "@type": "@id" },
+    "manifest": { "@id": "ab:manifest", "@type": "@id" },
+    "digest": "ab:digest",
+    "category": { "@id": "schema:additionalType" },
+    "visibility": "ab:visibility",
+    "attestation": "ab:attestation",
+    "publishedAt": { "@id": "schema:datePublished", "@type": "schema:DateTime" },
+    "createdAt": { "@id": "schema:dateCreated", "@type": "schema:DateTime" },
+
+    "ReproManifest": "ab:ReproManifest",
+    "imageDigest": "ab:imageDigest",
+    "protocol": "ab:protocol",
+    "inputsHash": "ab:inputsHash",
+    "dataset": "ab:dataset",
+    "seed": "ab:seed",
+    "trials": "ab:trials",
+    "hardware": "ab:hardware",
+    "evaluator": "schema:softwareVersion"
+  }
+}

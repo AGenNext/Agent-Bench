@@ -1,0 +1,40 @@
+{
+  "@context": {
+    "schema": "https://schema.org/",
+    "ab": "https://agent-bench.dev/ns#",
+
+    "Cluster": "ab:Cluster",
+    "provider": "ab:provider",
+    "region": "ab:region",
+    "endpoint": { "@id": "schema:url", "@type": "@id" },
+    "healthy": "ab:healthy",
+    "capacity": "ab:capacity",
+
+    "Placement": "ab:Placement",
+    "providers": "ab:providers",
+    "regions": "ab:regions",
+    "failover": "ab:failover",
+    "maxRetries": "ab:maxRetries",
+
+    "Workload": "ab:Workload",
+    "kind": { "@id": "schema:additionalType" },
+    "subject": { "@id": "schema:about", "@type": "@id" },
+    "protocol": "ab:protocol",
+    "image": "ab:image",
+    "inputs": "ab:inputs",
+    "placement": { "@id": "ab:placement", "@type": "@id" },
+    "budget": "ab:budget",
+
+    "Run": "ab:Run",
+    "workload": { "@id": "ab:workload", "@type": "@id" },
+    "cluster": { "@id": "ab:cluster", "@type": "@id" },
+    "phase": "ab:phase",
+    "attempt": "ab:attempt",
+    "handle": "ab:handle",
+    "observation": "ab:observation",
+    "score": { "@id": "ab:score", "@type": "@id" },
+    "startedAt": { "@id": "schema:startTime", "@type": "schema:DateTime" },
+    "endedAt": { "@id": "schema:endTime", "@type": "schema:DateTime" },
+    "createdAt": { "@id": "schema:dateCreated", "@type": "schema:DateTime" }
+  }
+}

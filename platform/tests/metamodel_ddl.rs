@@ -44,6 +44,16 @@ async fn evaluation_round_trips() {
         .query("SELECT VALUE grade FROM attribute_score:s1").await.unwrap().take(0).unwrap();
     assert!((grade.unwrap() - 0.83).abs() < 1e-9);
 
+    // Embedded nested data survives (FLEXIBLE) — not silently flattened.
+    let recall: Option<f64> = db
+        .query("SELECT VALUE metric_scores[0].value FROM attribute_score:s1")
+        .await.unwrap().take(0).unwrap();
+    assert_eq!(recall, Some(0.82));
+    let sample: Option<i64> = db
+        .query("SELECT VALUE conditions.sample_size FROM evaluation:e1")
+        .await.unwrap().take(0).unwrap();
+    assert_eq!(sample, Some(100));
+
     // Graph crawl: entity -> its evaluations' outcomes.
     let rows: Vec<serde_json::Value> = db
         .query("SELECT entity.name AS name, attribute.key AS attr, grade FROM attribute_score")

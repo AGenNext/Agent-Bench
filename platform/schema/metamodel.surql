@@ -24,7 +24,7 @@ DEFINE FIELD direction ON metric TYPE string
     ASSERT $value IN ["higher_is_better", "lower_is_better", "target", "range"];
 DEFINE FIELD formula   ON metric TYPE option<string>;
 -- threshold: { kind: gte|lte|eq|range, value?, min?, max? } (Threshold enum)
-DEFINE FIELD threshold ON metric TYPE option<object>;
+DEFINE FIELD threshold ON metric FLEXIBLE TYPE option<object>;
 DEFINE FIELD weight    ON metric TYPE option<float>;
 
 -- --- Protocol: how an attribute is evaluated (metrics + thresholds + rules) --
@@ -32,7 +32,7 @@ DEFINE TABLE protocol SCHEMAFULL;
 DEFINE FIELD key       ON protocol TYPE string;
 DEFINE FIELD version   ON protocol TYPE string;
 DEFINE FIELD attribute ON protocol TYPE option<string>;     -- attribute key
-DEFINE FIELD metrics   ON protocol TYPE option<array>;      -- MetricSpec[]
+DEFINE FIELD metrics   ON protocol FLEXIBLE TYPE option<array>;      -- MetricSpec[] (nested threshold objects)
 DEFINE INDEX protocol_label ON protocol FIELDS key, version UNIQUE;
 
 -- --- Benchmark: supplies tasks/fixtures/datasets/measurements ---------------
@@ -49,7 +49,7 @@ DEFINE FIELD protocol   ON evaluation TYPE record<protocol>;
 DEFINE FIELD benchmark  ON evaluation TYPE record<benchmark>;
 -- conditions: EvaluationConditions (dataset, sample_size, trials, hardware,
 -- runtime, evaluator_version, notes, conditions_hash)
-DEFINE FIELD conditions ON evaluation TYPE option<object>;
+DEFINE FIELD conditions ON evaluation FLEXIBLE TYPE option<object>;
 DEFINE FIELD created_at ON evaluation TYPE datetime DEFAULT time::now();
 
 -- --- Outcome: AttributeScore (the result of one evaluation) -----------------
@@ -59,7 +59,7 @@ DEFINE FIELD entity            ON attribute_score TYPE record<entity>;
 DEFINE FIELD attribute         ON attribute_score TYPE record<attribute>;
 DEFINE FIELD protocol          ON attribute_score TYPE record<protocol>;
 DEFINE FIELD benchmark         ON attribute_score TYPE record<benchmark>;
-DEFINE FIELD metric_scores     ON attribute_score TYPE array;          -- MetricScore[]
+DEFINE FIELD metric_scores     ON attribute_score FLEXIBLE TYPE array;  -- MetricScore[] (nested objects)
 DEFINE FIELD grade             ON attribute_score TYPE float ASSERT $value >= 0 AND $value <= 1;
 DEFINE FIELD passed            ON attribute_score TYPE bool;
 DEFINE FIELD confidence        ON attribute_score TYPE option<float>;
@@ -73,7 +73,7 @@ DEFINE FIELD entity              ON entity_score TYPE record<entity>;
 DEFINE FIELD overall_grade       ON entity_score TYPE float ASSERT $value >= 0 AND $value <= 1;
 DEFINE FIELD confidence          ON entity_score TYPE option<float>;
 DEFINE FIELD confidence_band     ON entity_score TYPE option<string>;
-DEFINE FIELD attribute_scores    ON entity_score TYPE object DEFAULT {};   -- key -> grade
+DEFINE FIELD attribute_scores    ON entity_score FLEXIBLE TYPE object DEFAULT {};   -- key -> grade
 DEFINE FIELD blocking_attributes ON entity_score TYPE array  DEFAULT [];
 DEFINE FIELD level               ON entity_score TYPE option<string>;
 
@@ -89,7 +89,7 @@ DEFINE FIELD score            ON leaderboard_row TYPE float;
 DEFINE FIELD confidence       ON leaderboard_row TYPE option<float>;
 DEFINE FIELD confidence_band  ON leaderboard_row TYPE option<string>;
 DEFINE FIELD primary_metric   ON leaderboard_row TYPE string;
-DEFINE FIELD secondary_metrics ON leaderboard_row TYPE object DEFAULT {};
+DEFINE FIELD secondary_metrics ON leaderboard_row FLEXIBLE TYPE object DEFAULT {};
 DEFINE FIELD passed           ON leaderboard_row TYPE bool;
 DEFINE FIELD level            ON leaderboard_row TYPE option<string>;
 DEFINE FIELD conditions_hash  ON leaderboard_row TYPE option<string>;
