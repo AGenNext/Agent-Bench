@@ -34,6 +34,10 @@ const MIGRATIONS: &[(&str, &str)] = &[
         "0003_generic_score",
         include_str!("../migrations/0003_generic_score.surql"),
     ),
+    (
+        "0004_collapse_generic",
+        include_str!("../migrations/0004_collapse_generic.surql"),
+    ),
 ];
 
 /// Parse a protocol label `key@version` into a [`ProtocolRef`].
@@ -162,7 +166,10 @@ impl Store {
             if already.is_some() {
                 continue;
             }
-            self.client.query(*sql).await?;
+            // Apply loudly: a failing statement must surface, not be silently
+            // recorded as applied. `.check()` turns per-statement errors into an
+            // error result.
+            self.client.query(*sql).await?.check()?;
             self.client
                 .query("CREATE _migration SET name = $name, applied_at = time::now()")
                 .bind(("name", name.to_string()))
@@ -189,6 +196,36 @@ impl Store {
         }
         let out: Option<f64> = q.await?.take(0)?;
         Ok(out)
+    }
+
+    // ---- introspection ----------------------------------------------------
+
+    /// Migrations recorded as applied in this tenant's namespace (ops/health).
+    pub async fn applied_migrations(&self, tenant: &str) -> AppResult<Vec<String>> {
+        let _g = self.lock.lock().await;
+        self.enter_tenant(tenant).await?;
+        let names: Vec<String> = self
+            .client
+            .query("SELECT VALUE name FROM _migration ORDER BY name")
+            .await?
+            .take(0)?;
+        Ok(names)
+    }
+
+    /// Count rows in a table within the tenant namespace. `table` must be a bare
+    /// identifier (`[A-Za-z0-9_]`), so it cannot inject SQL.
+    pub async fn table_count(&self, tenant: &str, table: &str) -> AppResult<usize> {
+        if table.is_empty() || !table.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_') {
+            return Err(AppError::BadRequest(format!("invalid table name: {table}")));
+        }
+        let _g = self.lock.lock().await;
+        self.enter_tenant(tenant).await?;
+        let ids: Vec<String> = self
+            .client
+            .query(format!("SELECT VALUE record::id(id) FROM {table}"))
+            .await?
+            .take(0)?;
+        Ok(ids.len())
     }
 
     // ---- agents -----------------------------------------------------------
