@@ -12,6 +12,10 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Least privilege: jobs only read the repo. Override per-job if a step needs more.
+permissions:
+  contents: read
+
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: "-D warnings"
@@ -76,11 +80,14 @@ jobs:
     runs-on: ubuntu-latest
     # Advisory for now: the backlog of existing advisories is tracked separately
     # (see Dependabot). Flip `continue-on-error` to false once the backlog is
-    # cleared so new vulnerabilities hard-block.
+    # cleared so new vulnerabilities hard-block. Runs cargo-audit directly so it
+    # needs only read access to the repo (no elevated GITHUB_TOKEN).
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: rustsec/audit-check@v2
+      - uses: Swatinem/rust-cache@v2
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          workspaces: platform
+      - run: cargo install cargo-audit --locked
+      - run: cargo audit
