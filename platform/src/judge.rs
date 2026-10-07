@@ -29,12 +29,18 @@ impl Judge for DeterministicJudge {
             return 0.0;
         }
         // Fraction of criteria keywords present — transparent, reproducible.
-        let keys: Vec<&str> = criteria.split_whitespace().filter(|w| w.len() > 3).collect();
+        let keys: Vec<&str> = criteria
+            .split_whitespace()
+            .filter(|w| w.len() > 3)
+            .collect();
         if keys.is_empty() {
             return 0.5;
         }
         let lower = output.to_lowercase();
-        let hits = keys.iter().filter(|k| lower.contains(&k.to_lowercase())).count();
+        let hits = keys
+            .iter()
+            .filter(|k| lower.contains(&k.to_lowercase()))
+            .count();
         (hits as f64 / keys.len() as f64).clamp(0.0, 1.0)
     }
 
@@ -60,6 +66,9 @@ mod tests {
     #[test]
     fn pairwise_picks_better_coverage() {
         let j = DeterministicJudge;
-        assert_eq!(j.pairwise("clear correct answer", "vague", "clear correct"), Ordering::Greater);
+        assert_eq!(
+            j.pairwise("clear correct answer", "vague", "clear correct"),
+            Ordering::Greater
+        );
     }
 }

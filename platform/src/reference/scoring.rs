@@ -81,7 +81,10 @@ pub fn score_run(results: &[TaskResult], weights: ClearWeights) -> RunScores {
     let progress_rate = if results.is_empty() {
         0.0
     } else {
-        results.iter().map(|r| progress_rate_continuous(&[r.progress_rate])).sum::<f64>()
+        results
+            .iter()
+            .map(|r| progress_rate_continuous(&[r.progress_rate]))
+            .sum::<f64>()
             / results.len() as f64
     };
 

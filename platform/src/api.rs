@@ -16,7 +16,10 @@ pub fn router(store: Store) -> Router {
     Router::new()
         .route("/health", get(health))
         .route("/v1/agents", post(create_agent).get(list_agents))
-        .route("/v1/benchmarks", post(upsert_benchmark).get(list_benchmarks))
+        .route(
+            "/v1/benchmarks",
+            post(upsert_benchmark).get(list_benchmarks),
+        )
         .route("/v1/runs", post(submit_run))
         .route("/v1/leaderboard/:benchmark_id", get(leaderboard))
         .with_state(store)
@@ -34,10 +37,7 @@ async fn create_agent(
     Ok(Json(store.create_agent(&tenant.0, agent).await?))
 }
 
-async fn list_agents(
-    State(store): State<Store>,
-    tenant: Tenant,
-) -> AppResult<Json<Vec<Agent>>> {
+async fn list_agents(State(store): State<Store>, tenant: Tenant) -> AppResult<Json<Vec<Agent>>> {
     Ok(Json(store.list_agents(&tenant.0).await?))
 }
 
@@ -73,6 +73,8 @@ async fn leaderboard(
     // Optional ?hardware=gpu-a100 slices the board to one backend.
     let hardware = params.get("hardware").map(String::as_str);
     Ok(Json(
-        store.leaderboard(&tenant.0, &benchmark_id, hardware).await?,
+        store
+            .leaderboard(&tenant.0, &benchmark_id, hardware)
+            .await?,
     ))
 }

@@ -148,10 +148,22 @@ mod tests {
     #[test]
     fn mid_range_keeps_band() {
         let tasks = vec![
-            TaskDifficulty { task_id: "a".into(), pass_rate: 0.10 },
-            TaskDifficulty { task_id: "b".into(), pass_rate: 0.50 },
-            TaskDifficulty { task_id: "c".into(), pass_rate: 0.65 },
-            TaskDifficulty { task_id: "d".into(), pass_rate: 0.95 },
+            TaskDifficulty {
+                task_id: "a".into(),
+                pass_rate: 0.10,
+            },
+            TaskDifficulty {
+                task_id: "b".into(),
+                pass_rate: 0.50,
+            },
+            TaskDifficulty {
+                task_id: "c".into(),
+                pass_rate: 0.65,
+            },
+            TaskDifficulty {
+                task_id: "d".into(),
+                pass_rate: 0.95,
+            },
         ];
         let kept = mid_range_default(&tasks);
         assert_eq!(kept, vec!["b".to_string(), "c".to_string()]);

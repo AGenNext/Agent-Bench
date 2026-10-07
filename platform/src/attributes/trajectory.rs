@@ -29,7 +29,11 @@ pub struct TrajectoryInput {
 }
 
 fn ratio(num: u32, den: u32) -> f64 {
-    if den == 0 { 0.0 } else { (num as f64 / den as f64).clamp(0.0, 1.0) }
+    if den == 0 {
+        0.0
+    } else {
+        (num as f64 / den as f64).clamp(0.0, 1.0)
+    }
 }
 
 /// Aggregate trajectory scores, all in `[0,1]`.
@@ -99,10 +103,18 @@ pub struct TrajectoryVerdict {
 
 pub fn evaluate(s: &TrajectoryScores, t: TrajectoryThresholds) -> TrajectoryVerdict {
     let checks: [(&str, f64, f64); 4] = [
-        ("tool_call_accuracy", s.tool_call_accuracy, t.tool_call_accuracy),
+        (
+            "tool_call_accuracy",
+            s.tool_call_accuracy,
+            t.tool_call_accuracy,
+        ),
         ("step_efficiency", s.step_efficiency, t.step_efficiency),
         ("plan_adherence", s.plan_adherence, t.plan_adherence),
-        ("grounding_accuracy", s.grounding_accuracy, t.grounding_accuracy),
+        (
+            "grounding_accuracy",
+            s.grounding_accuracy,
+            t.grounding_accuracy,
+        ),
     ];
     let mut passed = 0;
     let mut gaps = Vec::new();
@@ -110,8 +122,17 @@ pub fn evaluate(s: &TrajectoryScores, t: TrajectoryThresholds) -> TrajectoryVerd
         if value >= threshold {
             passed += 1;
         } else {
-            let severity = if threshold > 0.0 { ((threshold - value) / threshold).clamp(0.0, 1.0) } else { 1.0 };
-            gaps.push(TrajectoryGap { metric: metric.into(), value, threshold, severity });
+            let severity = if threshold > 0.0 {
+                ((threshold - value) / threshold).clamp(0.0, 1.0)
+            } else {
+                1.0
+            };
+            gaps.push(TrajectoryGap {
+                metric: metric.into(),
+                value,
+                threshold,
+                severity,
+            });
         }
     }
     gaps.sort_by(|a, b| b.severity.partial_cmp(&a.severity).unwrap());
@@ -131,7 +152,11 @@ pub fn evaluate_default(i: TrajectoryInput) -> TrajectoryVerdict {
 // --- Trajectory as a protocol implementation under the generic metamodel ----
 
 /// Emit the generic `AttributeScore` for the trajectory attribute.
-pub fn attribute_score(entity: EntityRef, s: &TrajectoryScores, t: TrajectoryThresholds) -> AttributeScore {
+pub fn attribute_score(
+    entity: EntityRef,
+    s: &TrajectoryScores,
+    t: TrajectoryThresholds,
+) -> AttributeScore {
     let spec = |key: &str, threshold| MetricSpec {
         key: key.into(),
         direction: MetricDirection::HigherIsBetter,
@@ -145,7 +170,12 @@ pub fn attribute_score(entity: EntityRef, s: &TrajectoryScores, t: TrajectoryThr
         spec("plan_adherence", t.plan_adherence),
         spec("grounding_accuracy", t.grounding_accuracy),
     ];
-    let values = [s.tool_call_accuracy, s.step_efficiency, s.plan_adherence, s.grounding_accuracy];
+    let values = [
+        s.tool_call_accuracy,
+        s.step_efficiency,
+        s.plan_adherence,
+        s.grounding_accuracy,
+    ];
     let metric_scores: Vec<MetricScore> = specs
         .iter()
         .zip(values)
@@ -153,9 +183,18 @@ pub fn attribute_score(entity: EntityRef, s: &TrajectoryScores, t: TrajectoryThr
         .collect();
     AttributeScore {
         entity,
-        attribute: AttributeRef { key: "trajectory".into(), name: Some("Trajectory".into()) },
-        protocol: ProtocolRef { key: "TRAJ-001".into(), version: "0.1.0".into() },
-        benchmark: BenchmarkRef { key: "TRAJ-001".into(), version: "0.1.0".into() },
+        attribute: AttributeRef {
+            key: "trajectory".into(),
+            name: Some("Trajectory".into()),
+        },
+        protocol: ProtocolRef {
+            key: "TRAJ-001".into(),
+            version: "0.1.0".into(),
+        },
+        benchmark: BenchmarkRef {
+            key: "TRAJ-001".into(),
+            version: "0.1.0".into(),
+        },
         grade: default_attribute_grade(&metric_scores),
         passed: default_passed(&metric_scores),
         confidence: None,
@@ -175,7 +214,12 @@ mod tests {
     fn attribute_score_matches_verdict() {
         let s = score(good());
         let verdict = evaluate(&s, TrajectoryThresholds::default());
-        let entity = EntityRef { id: "did:agent:x".into(), entity_type: "agent".into(), name: None, version: None };
+        let entity = EntityRef {
+            id: "did:agent:x".into(),
+            entity_type: "agent".into(),
+            name: None,
+            version: None,
+        };
         let a = attribute_score(entity, &s, TrajectoryThresholds::default());
         assert!((a.grade - verdict.grade).abs() < 1e-9);
         assert_eq!(a.passed, verdict.passed);
@@ -185,10 +229,14 @@ mod tests {
 
     fn good() -> TrajectoryInput {
         TrajectoryInput {
-            correct_tool_calls: 9, total_tool_calls: 10,   // 0.90
-            optimal_steps: 8, actual_steps: 10,            // 0.80
-            adhered_steps: 9, planned_steps: 10,           // 0.90
-            valid_actions: 19, total_actions: 20,          // 0.95
+            correct_tool_calls: 9,
+            total_tool_calls: 10, // 0.90
+            optimal_steps: 8,
+            actual_steps: 10, // 0.80
+            adhered_steps: 9,
+            planned_steps: 10, // 0.90
+            valid_actions: 19,
+            total_actions: 20, // 0.95
         }
     }
 
@@ -209,14 +257,22 @@ mod tests {
     #[test]
     fn weak_trajectory_flags_worst_first() {
         let i = TrajectoryInput {
-            correct_tool_calls: 3, total_tool_calls: 10,   // 0.30 (worst)
-            optimal_steps: 3, actual_steps: 10,            // 0.30
-            adhered_steps: 5, planned_steps: 10,           // 0.50
-            valid_actions: 18, total_actions: 20,          // 0.90 (passes)
+            correct_tool_calls: 3,
+            total_tool_calls: 10, // 0.30 (worst)
+            optimal_steps: 3,
+            actual_steps: 10, // 0.30
+            adhered_steps: 5,
+            planned_steps: 10, // 0.50
+            valid_actions: 18,
+            total_actions: 20, // 0.90 (passes)
         };
         let v = evaluate_default(i);
         assert!(!v.passed);
-        let metrics: Vec<&str> = v.improvement_areas.iter().map(|g| g.metric.as_str()).collect();
+        let metrics: Vec<&str> = v
+            .improvement_areas
+            .iter()
+            .map(|g| g.metric.as_str())
+            .collect();
         assert!(metrics.contains(&"tool_call_accuracy"));
         assert!(!metrics.contains(&"grounding_accuracy"));
         for w in v.improvement_areas.windows(2) {
