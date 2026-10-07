@@ -209,7 +209,10 @@ async fn multi_hardware_leaderboard() {
                 hardware: "gpu-a100".into(),
                 dsl: "triton".into(),
                 trials: 1,
-                metrics: vec![metric("correctness", 1.0, 0.5), metric("speedup", 0.95, 0.5)],
+                metrics: vec![
+                    metric("correctness", 1.0, 0.5),
+                    metric("speedup", 0.95, 0.5),
+                ],
             },
         )
         .await
@@ -225,7 +228,10 @@ async fn multi_hardware_leaderboard() {
                 hardware: "npu".into(),
                 dsl: "triton".into(),
                 trials: 1,
-                metrics: vec![metric("correctness", 0.5, 0.5), metric("speedup", 0.20, 0.5)],
+                metrics: vec![
+                    metric("correctness", 0.5, 0.5),
+                    metric("speedup", 0.20, 0.5),
+                ],
             },
         )
         .await
@@ -247,6 +253,9 @@ async fn multi_hardware_leaderboard() {
     assert!(npu[0].grade < gpu[0].grade, "same agent worse on NPU");
 
     // Unsliced board sees both runs.
-    let all = store.leaderboard(tenant, "kernelbench", None).await.unwrap();
+    let all = store
+        .leaderboard(tenant, "kernelbench", None)
+        .await
+        .unwrap();
     assert_eq!(all.len(), 2);
 }

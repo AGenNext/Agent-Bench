@@ -199,7 +199,13 @@ mod tests {
         let patch = card.as_card_patch();
         // Updates the memory slot in place under evaluations, with conditions.
         assert_eq!(patch["evaluations"]["memory"]["attribute"], "memory");
-        assert_eq!(patch["evaluations"]["memory"]["conditions"]["protocol"], "AMB-001@0.1.0");
-        assert_eq!(patch["evaluations"]["memory"]["conditions"]["sample_size"], 10);
+        assert_eq!(
+            patch["evaluations"]["memory"]["conditions"]["protocol"],
+            "AMB-001@0.1.0"
+        );
+        assert_eq!(
+            patch["evaluations"]["memory"]["conditions"]["sample_size"],
+            10
+        );
     }
 }

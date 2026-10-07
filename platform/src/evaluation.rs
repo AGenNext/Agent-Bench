@@ -121,8 +121,14 @@ pub struct MetricScore {
 
 impl MetricScore {
     pub fn from_spec(spec: &MetricSpec, value: f64, normalized_score: Option<f64>) -> Self {
-        let passed = spec.threshold.as_ref().map(|threshold| threshold.passed(value));
-        let severity = spec.threshold.as_ref().map(|threshold| threshold.severity(value));
+        let passed = spec
+            .threshold
+            .as_ref()
+            .map(|threshold| threshold.passed(value));
+        let severity = spec
+            .threshold
+            .as_ref()
+            .map(|threshold| threshold.severity(value));
         Self {
             metric_key: spec.key.clone(),
             value,
@@ -248,7 +254,9 @@ pub fn default_attribute_grade(metric_scores: &[MetricScore]) -> f64 {
 }
 
 pub fn default_passed(metric_scores: &[MetricScore]) -> bool {
-    metric_scores.iter().all(|score| score.passed.unwrap_or(true))
+    metric_scores
+        .iter()
+        .all(|score| score.passed.unwrap_or(true))
 }
 
 pub fn default_improvement_areas(metric_scores: &[MetricScore]) -> Vec<ImprovementArea> {
@@ -315,10 +323,26 @@ pub struct LevelBand {
 /// Salesforce Agentic Maturity Model — 4 levels.
 pub fn salesforce_agentic_levels() -> Vec<LevelBand> {
     vec![
-        LevelBand { level: 1, name: "Fixed-Function".into(), min_grade: 0.0 },
-        LevelBand { level: 2, name: "Knowledge & Reasoning".into(), min_grade: 0.50 },
-        LevelBand { level: 3, name: "Multistep / Multi-turn".into(), min_grade: 0.70 },
-        LevelBand { level: 4, name: "Multi-Agent / Autonomous".into(), min_grade: 0.90 },
+        LevelBand {
+            level: 1,
+            name: "Fixed-Function".into(),
+            min_grade: 0.0,
+        },
+        LevelBand {
+            level: 2,
+            name: "Knowledge & Reasoning".into(),
+            min_grade: 0.50,
+        },
+        LevelBand {
+            level: 3,
+            name: "Multistep / Multi-turn".into(),
+            min_grade: 0.70,
+        },
+        LevelBand {
+            level: 4,
+            name: "Multi-Agent / Autonomous".into(),
+            min_grade: 0.90,
+        },
     ]
 }
 
@@ -338,9 +362,18 @@ mod tests {
     #[test]
     fn salesforce_levels_assign_by_grade() {
         let s = salesforce_agentic_levels();
-        assert_eq!(assign_level(0.95, &s), Some((4, "Multi-Agent / Autonomous".into())));
-        assert_eq!(assign_level(0.72, &s), Some((3, "Multistep / Multi-turn".into())));
-        assert_eq!(assign_level(0.55, &s), Some((2, "Knowledge & Reasoning".into())));
+        assert_eq!(
+            assign_level(0.95, &s),
+            Some((4, "Multi-Agent / Autonomous".into()))
+        );
+        assert_eq!(
+            assign_level(0.72, &s),
+            Some((3, "Multistep / Multi-turn".into()))
+        );
+        assert_eq!(
+            assign_level(0.55, &s),
+            Some((2, "Knowledge & Reasoning".into()))
+        );
         assert_eq!(assign_level(0.10, &s), Some((1, "Fixed-Function".into())));
     }
 
@@ -356,8 +389,22 @@ mod tests {
     #[test]
     fn default_grade_uses_weighted_normalized_scores() {
         let scores = vec![
-            MetricScore { metric_key: "a".into(), value: 1.0, normalized_score: Some(1.0), passed: Some(true), severity: Some(0.0), weight: 2.0 },
-            MetricScore { metric_key: "b".into(), value: 0.0, normalized_score: Some(0.0), passed: Some(false), severity: Some(1.0), weight: 1.0 },
+            MetricScore {
+                metric_key: "a".into(),
+                value: 1.0,
+                normalized_score: Some(1.0),
+                passed: Some(true),
+                severity: Some(0.0),
+                weight: 2.0,
+            },
+            MetricScore {
+                metric_key: "b".into(),
+                value: 0.0,
+                normalized_score: Some(0.0),
+                passed: Some(false),
+                severity: Some(1.0),
+                weight: 1.0,
+            },
         ];
         assert!((default_attribute_grade(&scores) - 0.6666666667).abs() < 1e-9);
     }
@@ -365,8 +412,22 @@ mod tests {
     #[test]
     fn default_grade_falls_back_to_passed_fraction() {
         let scores = vec![
-            MetricScore { metric_key: "a".into(), value: 1.0, normalized_score: None, passed: Some(true), severity: Some(0.0), weight: 1.0 },
-            MetricScore { metric_key: "b".into(), value: 0.0, normalized_score: None, passed: Some(false), severity: Some(1.0), weight: 1.0 },
+            MetricScore {
+                metric_key: "a".into(),
+                value: 1.0,
+                normalized_score: None,
+                passed: Some(true),
+                severity: Some(0.0),
+                weight: 1.0,
+            },
+            MetricScore {
+                metric_key: "b".into(),
+                value: 0.0,
+                normalized_score: None,
+                passed: Some(false),
+                severity: Some(1.0),
+                weight: 1.0,
+            },
         ];
         assert_eq!(default_attribute_grade(&scores), 0.5);
     }

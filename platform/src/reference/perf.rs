@@ -50,7 +50,11 @@ pub fn correctness(obs: &[PerfObservation]) -> f64 {
 
 /// Geometric mean of speedups over correct tasks: exp(mean(ln(speedup))).
 pub fn speedup_geomean(obs: &[PerfObservation]) -> f64 {
-    let logs: Vec<f64> = obs.iter().filter_map(|o| o.speedup()).map(f64::ln).collect();
+    let logs: Vec<f64> = obs
+        .iter()
+        .filter_map(|o| o.speedup())
+        .map(f64::ln)
+        .collect();
     if logs.is_empty() {
         return 1.0;
     }
@@ -83,7 +87,11 @@ mod tests {
     use super::*;
 
     fn o(correct: bool, base: f64, kernel: f64) -> PerfObservation {
-        PerfObservation { correct, baseline_latency_ms: base, kernel_latency_ms: kernel }
+        PerfObservation {
+            correct,
+            baseline_latency_ms: base,
+            kernel_latency_ms: kernel,
+        }
     }
 
     #[test]

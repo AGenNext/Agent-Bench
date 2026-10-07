@@ -43,8 +43,14 @@ const MIGRATIONS: &[(&str, &str)] = &[
 /// Parse a protocol label `key@version` into a [`ProtocolRef`].
 fn protocol_ref(label: &str) -> ProtocolRef {
     match label.split_once('@') {
-        Some((key, version)) => ProtocolRef { key: key.into(), version: version.into() },
-        None => ProtocolRef { key: label.into(), version: String::new() },
+        Some((key, version)) => ProtocolRef {
+            key: key.into(),
+            version: version.into(),
+        },
+        None => ProtocolRef {
+            key: label.into(),
+            version: String::new(),
+        },
     }
 }
 
@@ -73,9 +79,15 @@ fn score_attribute(entity: EntityRef, req: &SubmitRun) -> AttributeScore {
 
     AttributeScore {
         entity,
-        attribute: AttributeRef { key: req.attribute.clone(), name: None },
+        attribute: AttributeRef {
+            key: req.attribute.clone(),
+            name: None,
+        },
         protocol: protocol_ref(&req.protocol),
-        benchmark: BenchmarkRef { key: req.benchmark_id.clone(), version: String::new() },
+        benchmark: BenchmarkRef {
+            key: req.benchmark_id.clone(),
+            version: String::new(),
+        },
         passed: default_passed(&metric_scores),
         improvement_areas: default_improvement_areas(&metric_scores),
         grade,
@@ -215,7 +227,11 @@ impl Store {
     /// Count rows in a table within the tenant namespace. `table` must be a bare
     /// identifier (`[A-Za-z0-9_]`), so it cannot inject SQL.
     pub async fn table_count(&self, tenant: &str, table: &str) -> AppResult<usize> {
-        if table.is_empty() || !table.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_') {
+        if table.is_empty()
+            || !table
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'_')
+        {
             return Err(AppError::BadRequest(format!("invalid table name: {table}")));
         }
         let _g = self.lock.lock().await;
@@ -257,9 +273,7 @@ impl Store {
         self.enter_tenant(tenant).await?;
         let rows: Vec<Agent> = self
             .client
-            .query(
-                "SELECT record::id(id) AS id, name, scaffold, model, version FROM agent",
-            )
+            .query("SELECT record::id(id) AS id, name, scaffold, model, version FROM agent")
             .await?
             .take(0)?;
         Ok(rows)
@@ -316,8 +330,8 @@ impl Store {
         let _g = self.lock.lock().await;
         self.enter_tenant(tenant).await?;
 
-        let score_json = serde_json::to_value(&score)
-            .map_err(|e| AppError::BadRequest(e.to_string()))?;
+        let score_json =
+            serde_json::to_value(&score).map_err(|e| AppError::BadRequest(e.to_string()))?;
 
         let created: Vec<serde_json::Value> = self
             .client
@@ -383,7 +397,10 @@ impl Store {
              FROM run \
              WHERE benchmark.benchmark_id = $bid AND status = 'scored'{hw_filter}"
         );
-        let mut q = self.client.query(sql).bind(("bid", benchmark_id.to_string()));
+        let mut q = self
+            .client
+            .query(sql)
+            .bind(("bid", benchmark_id.to_string()));
         if let Some(hw) = hardware {
             q = q.bind(("hw", hw.to_string()));
         }
@@ -413,8 +430,16 @@ impl Store {
                         .and_then(|s| s.as_str())
                         .unwrap_or("")
                         .to_string(),
-                    hardware: v.get("hardware").and_then(|s| s.as_str()).unwrap_or("").to_string(),
-                    dsl: v.get("dsl").and_then(|s| s.as_str()).unwrap_or("").to_string(),
+                    hardware: v
+                        .get("hardware")
+                        .and_then(|s| s.as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                    dsl: v
+                        .get("dsl")
+                        .and_then(|s| s.as_str())
+                        .unwrap_or("")
+                        .to_string(),
                     grade: score.as_ref().map(|s| s.grade).unwrap_or(0.0),
                     passed: score.as_ref().map(|s| s.passed).unwrap_or(false),
                     level: score.as_ref().and_then(|s| s.level.clone()),

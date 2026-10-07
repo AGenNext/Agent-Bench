@@ -173,18 +173,47 @@ pub struct MemoryVerdict {
 pub fn evaluate(scores: &MemoryScores, t: MemoryThresholds) -> MemoryVerdict {
     // (name, value, threshold, higher_is_better)
     let checks: [(&str, f64, f64, bool); 6] = [
-        ("recall_accuracy", scores.recall_accuracy, t.recall_accuracy, true),
+        (
+            "recall_accuracy",
+            scores.recall_accuracy,
+            t.recall_accuracy,
+            true,
+        ),
         ("gap_handling", scores.gap_handling, t.gap_handling, true),
-        ("conflict_handling", scores.conflict_handling_avg, t.conflict_handling_avg, true),
-        ("cold_start_latency_ms", scores.cold_start_latency_ms, t.cold_start_latency_ms, false),
-        ("p50_recall_latency_ms", scores.p50_recall_latency_ms, t.p50_recall_latency_ms, false),
-        ("p99_recall_latency_ms", scores.p99_recall_latency_ms, t.p99_recall_latency_ms, false),
+        (
+            "conflict_handling",
+            scores.conflict_handling_avg,
+            t.conflict_handling_avg,
+            true,
+        ),
+        (
+            "cold_start_latency_ms",
+            scores.cold_start_latency_ms,
+            t.cold_start_latency_ms,
+            false,
+        ),
+        (
+            "p50_recall_latency_ms",
+            scores.p50_recall_latency_ms,
+            t.p50_recall_latency_ms,
+            false,
+        ),
+        (
+            "p99_recall_latency_ms",
+            scores.p99_recall_latency_ms,
+            t.p99_recall_latency_ms,
+            false,
+        ),
     ];
 
     let mut passed_count = 0;
     let mut gaps = Vec::new();
     for (name, value, threshold, higher_better) in checks {
-        let ok = if higher_better { value >= threshold } else { value <= threshold };
+        let ok = if higher_better {
+            value >= threshold
+        } else {
+            value <= threshold
+        };
         if ok {
             passed_count += 1;
         } else {
@@ -196,7 +225,12 @@ pub fn evaluate(scores: &MemoryScores, t: MemoryThresholds) -> MemoryVerdict {
             } else {
                 1.0
             };
-            gaps.push(MemoryGap { metric: name.to_string(), value, threshold, severity });
+            gaps.push(MemoryGap {
+                metric: name.to_string(),
+                value,
+                threshold,
+                severity,
+            });
         }
     }
     gaps.sort_by(|a, b| b.severity.partial_cmp(&a.severity).unwrap());
@@ -314,8 +348,18 @@ pub fn compare(
         b.grade
             .partial_cmp(&a.grade)
             .unwrap()
-            .then(b.scores.recall_accuracy.partial_cmp(&a.scores.recall_accuracy).unwrap())
-            .then(a.scores.p50_recall_latency_ms.partial_cmp(&b.scores.p50_recall_latency_ms).unwrap())
+            .then(
+                b.scores
+                    .recall_accuracy
+                    .partial_cmp(&a.scores.recall_accuracy)
+                    .unwrap(),
+            )
+            .then(
+                a.scores
+                    .p50_recall_latency_ms
+                    .partial_cmp(&b.scores.p50_recall_latency_ms)
+                    .unwrap(),
+            )
     });
     for (i, r) in rows.iter_mut().enumerate() {
         r.rank = (i + 1) as u32;
@@ -325,7 +369,10 @@ pub fn compare(
     let mut leaders = Vec::new();
     for (metric, higher_better) in COMPARED_METRICS {
         let best = entries.iter().max_by(|a, b| {
-            let (va, vb) = (metric_value(&a.scores, metric), metric_value(&b.scores, metric));
+            let (va, vb) = (
+                metric_value(&a.scores, metric),
+                metric_value(&b.scores, metric),
+            );
             if higher_better {
                 va.partial_cmp(&vb).unwrap()
             } else {
@@ -342,7 +389,10 @@ pub fn compare(
     }
 
     // Focal framework's gap to the leader per metric (its next-level path).
-    let focal_scores = entries.iter().find(|e| e.framework == focal).map(|e| &e.scores);
+    let focal_scores = entries
+        .iter()
+        .find(|e| e.framework == focal)
+        .map(|e| &e.scores);
     let mut next_level = Vec::new();
     if let Some(fs) = focal_scores {
         for (metric, higher_better) in COMPARED_METRICS {
@@ -353,7 +403,11 @@ pub fn compare(
                 }
                 let v = metric_value(fs, metric);
                 let target = l.value;
-                let behind = if higher_better { v < target } else { v > target };
+                let behind = if higher_better {
+                    v < target
+                } else {
+                    v > target
+                };
                 if behind {
                     let severity = if higher_better && target > 0.0 {
                         ((target - v) / target).clamp(0.0, 1.0)
@@ -374,7 +428,11 @@ pub fn compare(
         next_level.sort_by(|a, b| b.severity.partial_cmp(&a.severity).unwrap());
     }
 
-    let focal_rank = rows.iter().find(|r| r.framework == focal).map(|r| r.rank).unwrap_or(0);
+    let focal_rank = rows
+        .iter()
+        .find(|r| r.framework == focal)
+        .map(|r| r.rank)
+        .unwrap_or(0);
 
     MemoryComparison {
         ranking: rows,
@@ -403,10 +461,26 @@ pub fn metric_specs(t: MemoryThresholds) -> Vec<MetricSpec> {
     vec![
         spec("recall_accuracy", hi, Threshold::Gte(t.recall_accuracy)),
         spec("gap_handling", hi, Threshold::Gte(t.gap_handling)),
-        spec("conflict_handling_avg", hi, Threshold::Gte(t.conflict_handling_avg)),
-        spec("cold_start_latency_ms", lo, Threshold::Lte(t.cold_start_latency_ms)),
-        spec("p50_recall_latency_ms", lo, Threshold::Lte(t.p50_recall_latency_ms)),
-        spec("p99_recall_latency_ms", lo, Threshold::Lte(t.p99_recall_latency_ms)),
+        spec(
+            "conflict_handling_avg",
+            hi,
+            Threshold::Gte(t.conflict_handling_avg),
+        ),
+        spec(
+            "cold_start_latency_ms",
+            lo,
+            Threshold::Lte(t.cold_start_latency_ms),
+        ),
+        spec(
+            "p50_recall_latency_ms",
+            lo,
+            Threshold::Lte(t.p50_recall_latency_ms),
+        ),
+        spec(
+            "p99_recall_latency_ms",
+            lo,
+            Threshold::Lte(t.p99_recall_latency_ms),
+        ),
     ]
 }
 
@@ -428,9 +502,18 @@ pub fn attribute_score(entity: EntityRef, s: &MemoryScores, t: MemoryThresholds)
         .collect();
     AttributeScore {
         entity,
-        attribute: AttributeRef { key: "memory".into(), name: Some("Memory".into()) },
-        protocol: ProtocolRef { key: "AMB-001".into(), version: "0.1.0".into() },
-        benchmark: BenchmarkRef { key: "AMB-001".into(), version: "0.1.0".into() },
+        attribute: AttributeRef {
+            key: "memory".into(),
+            name: Some("Memory".into()),
+        },
+        protocol: ProtocolRef {
+            key: "AMB-001".into(),
+            version: "0.1.0".into(),
+        },
+        benchmark: BenchmarkRef {
+            key: "AMB-001".into(),
+            version: "0.1.0".into(),
+        },
         grade: default_attribute_grade(&metric_scores),
         passed: default_passed(&metric_scores),
         confidence: None,
@@ -448,7 +531,12 @@ mod tests {
     use crate::evaluation::EntityRef;
 
     fn entity() -> EntityRef {
-        EntityRef { id: "did:agent:x".into(), entity_type: "agent".into(), name: None, version: None }
+        EntityRef {
+            id: "did:agent:x".into(),
+            entity_type: "agent".into(),
+            name: None,
+            version: None,
+        }
     }
 
     #[test]
@@ -463,7 +551,13 @@ mod tests {
     }
 
     fn q(cat: MemoryQueryCategory, correct: bool, lat: f64) -> MemoryQueryResult {
-        MemoryQueryResult { category: cat, correct, gap_handled: None, conflict_score: None, recall_latency_ms: lat }
+        MemoryQueryResult {
+            category: cat,
+            correct,
+            gap_handled: None,
+            conflict_score: None,
+            recall_latency_ms: lat,
+        }
     }
 
     #[test]
@@ -487,13 +581,20 @@ mod tests {
     #[test]
     fn weak_memory_flags_worst_first() {
         // 40% recall (below 0.70) and slow p99.
-        let mut results = vec![q(IdentityRecall, true, 100.0), q(IdentityRecall, false, 100.0)];
+        let mut results = vec![
+            q(IdentityRecall, true, 100.0),
+            q(IdentityRecall, false, 100.0),
+        ];
         results.push(q(TemporalRecall, false, 3000.0)); // drags p99 over 2000
         let v = evaluate_amb_001(&results, 1000.0, 0);
         assert!(!v.passed);
         assert!(v.grade < 1.0);
         // recall_accuracy and p99 should be flagged.
-        let metrics: Vec<&str> = v.improvement_areas.iter().map(|g| g.metric.as_str()).collect();
+        let metrics: Vec<&str> = v
+            .improvement_areas
+            .iter()
+            .map(|g| g.metric.as_str())
+            .collect();
         assert!(metrics.contains(&"recall_accuracy"));
         assert!(metrics.contains(&"p99_recall_latency_ms"));
         // Worst-first ordering by severity.
@@ -534,13 +635,21 @@ mod tests {
         assert_eq!(cmp.focal_rank, 1);
 
         // Agent-memory leads recall, latency, and ops simplicity (0 deps).
-        let leader = |m: &str| cmp.per_metric_leader.iter().find(|l| l.metric == m).unwrap();
+        let leader = |m: &str| {
+            cmp.per_metric_leader
+                .iter()
+                .find(|l| l.metric == m)
+                .unwrap()
+        };
         assert_eq!(leader("recall_accuracy").framework, "agent-memory");
         assert_eq!(leader("external_deps_required").framework, "agent-memory");
         assert_eq!(leader("p99_recall_latency_ms").framework, "agent-memory");
 
         // Since it already leads, its next-level list is empty on those metrics.
-        assert!(cmp.focal_next_level.iter().all(|g| g.metric != "recall_accuracy"));
+        assert!(cmp
+            .focal_next_level
+            .iter()
+            .all(|g| g.metric != "recall_accuracy"));
     }
 
     #[test]
@@ -551,7 +660,10 @@ mod tests {
             fm("mem0", 0.90, 300.0, 900.0, 1),
         ];
         let cmp = compare(&entries, MemoryThresholds::amb_001(), "agent-memory");
-        let recall_gap = cmp.focal_next_level.iter().find(|g| g.metric == "recall_accuracy");
+        let recall_gap = cmp
+            .focal_next_level
+            .iter()
+            .find(|g| g.metric == "recall_accuracy");
         assert!(recall_gap.is_some(), "should flag recall gap to leader");
         let g = recall_gap.unwrap();
         assert!((g.threshold - 0.90).abs() < 1e-9, "target = leader's value");
@@ -561,8 +673,20 @@ mod tests {
     #[test]
     fn gap_and_conflict_scored_only_on_their_queries() {
         let results = vec![
-            MemoryQueryResult { category: Gap, correct: false, gap_handled: Some(true), conflict_score: None, recall_latency_ms: 50.0 },
-            MemoryQueryResult { category: Conflict, correct: true, gap_handled: None, conflict_score: Some(2), recall_latency_ms: 60.0 },
+            MemoryQueryResult {
+                category: Gap,
+                correct: false,
+                gap_handled: Some(true),
+                conflict_score: None,
+                recall_latency_ms: 50.0,
+            },
+            MemoryQueryResult {
+                category: Conflict,
+                correct: true,
+                gap_handled: None,
+                conflict_score: Some(2),
+                recall_latency_ms: 60.0,
+            },
         ];
         let s = score(&results, 500.0, 0);
         assert!((s.gap_handling - 1.0).abs() < 1e-9);

@@ -22,7 +22,11 @@ async fn loaded() -> surrealdb::Surreal<surrealdb::engine::any::Any> {
     db.query(METAMODEL).await.unwrap().check().unwrap();
     db.query(ORCHESTRATOR).await.unwrap().check().unwrap();
     db.query(SEED_OMNI).await.unwrap().check().unwrap();
-    db.query(RESULT_PACKAGE).await.expect("result_package.surql executes").check().expect("no errors");
+    db.query(RESULT_PACKAGE)
+        .await
+        .expect("result_package.surql executes")
+        .check()
+        .expect("no errors");
     db
 }
 
@@ -66,10 +70,15 @@ async fn run_packages_into_reproducible_artifact() {
 
     // Reproducibility: the manifest carries the exact inputs to replay the run.
     let repro: Vec<serde_json::Value> = db
-        .query("SELECT manifest.image_digest AS image, manifest.trials AS trials, \
+        .query(
+            "SELECT manifest.image_digest AS image, manifest.trials AS trials, \
                 manifest.seed AS seed, manifest.hardware.provider AS provider \
-                FROM result_package:pkg")
-        .await.unwrap().take(0).unwrap();
+                FROM result_package:pkg",
+        )
+        .await
+        .unwrap()
+        .take(0)
+        .unwrap();
     assert!(repro[0]["image"].as_str().unwrap().starts_with("sha256:"));
     assert_eq!(repro[0]["trials"], 3);
     assert_eq!(repro[0]["seed"], 42);
@@ -78,7 +87,10 @@ async fn run_packages_into_reproducible_artifact() {
     // Graph crawl: subject -> its published packages.
     let pubd: Vec<String> = db
         .query("SELECT VALUE in.digest FROM published WHERE out = entity:`gemini-omni`")
-        .await.unwrap().take(0).unwrap();
+        .await
+        .unwrap()
+        .take(0)
+        .unwrap();
     assert!(pubd[0].starts_with("sha256:"));
 }
 
@@ -102,9 +114,14 @@ async fn leaderboard_entry_traces_to_package() {
 
     // The ranked row points back to a public, reproducible package — no orphans.
     let prov: Vec<serde_json::Value> = db
-        .query("SELECT from_package.digest AS digest, from_package.visibility AS vis, \
-                from_package.manifest.trials AS trials FROM leaderboard_row:lr")
-        .await.unwrap().take(0).unwrap();
+        .query(
+            "SELECT from_package.digest AS digest, from_package.visibility AS vis, \
+                from_package.manifest.trials AS trials FROM leaderboard_row:lr",
+        )
+        .await
+        .unwrap()
+        .take(0)
+        .unwrap();
     assert_eq!(prov[0]["digest"], "sha256:dd");
     assert_eq!(prov[0]["vis"], "public");
     assert_eq!(prov[0]["trials"], 3);
@@ -112,7 +129,10 @@ async fn leaderboard_entry_traces_to_package() {
     // Graph crawl: package -> the rows it ranks in.
     let ranked: Vec<i64> = db
         .query("SELECT VALUE out.rank FROM ranks WHERE in = result_package:pkg")
-        .await.unwrap().take(0).unwrap();
+        .await
+        .unwrap()
+        .take(0)
+        .unwrap();
     assert_eq!(ranked, vec![1]);
 }
 
@@ -133,5 +153,8 @@ async fn package_digest_is_unique() {
         "CREATE result_package:p2 SET subject=entity:`gemini-omni`, run=run:r1, score=attribute_score:ss, \
              manifest=repro_manifest:mm, digest='sha256:dup';",
     ).await.unwrap().check();
-    assert!(dup.is_err(), "duplicate package digest must be rejected by the unique index");
+    assert!(
+        dup.is_err(),
+        "duplicate package digest must be rejected by the unique index"
+    );
 }

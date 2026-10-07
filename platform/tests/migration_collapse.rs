@@ -25,11 +25,23 @@ async fn collapse_migration_applies_and_installs_generic_model() {
 
     // Orchestrator + generic seed data is present — proving the big DDL block ran.
     assert_eq!(store.table_count(tenant, "workload_kind").await.unwrap(), 5);
-    assert_eq!(store.table_count(tenant, "conformance_check").await.unwrap(), 7);
+    assert_eq!(
+        store
+            .table_count(tenant, "conformance_check")
+            .await
+            .unwrap(),
+        7
+    );
     assert_eq!(store.table_count(tenant, "level_scheme").await.unwrap(), 9);
 
     // The new tables are live and queryable (empty until used).
-    for t in ["entity", "workload", "cluster", "result_package", "repro_manifest"] {
+    for t in [
+        "entity",
+        "workload",
+        "cluster",
+        "result_package",
+        "repro_manifest",
+    ] {
         assert_eq!(
             store.table_count(tenant, t).await.unwrap(),
             0,

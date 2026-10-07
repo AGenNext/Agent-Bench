@@ -19,9 +19,21 @@ async fn fresh() -> surrealdb::Surreal<surrealdb::engine::any::Any> {
 #[tokio::test]
 async fn schema_files_execute() {
     let db = fresh().await;
-    db.query(SCHEMA_METRICS).await.expect("metrics.surql executes").check().expect("no errors");
-    db.query(SCHEMA_MEMORY).await.expect("memory_attribute.surql executes").check().expect("no errors");
-    db.query(SCHEMA_TRAJECTORY).await.expect("trajectory_attribute.surql executes").check().expect("no errors");
+    db.query(SCHEMA_METRICS)
+        .await
+        .expect("metrics.surql executes")
+        .check()
+        .expect("no errors");
+    db.query(SCHEMA_MEMORY)
+        .await
+        .expect("memory_attribute.surql executes")
+        .check()
+        .expect("no errors");
+    db.query(SCHEMA_TRAJECTORY)
+        .await
+        .expect("trajectory_attribute.surql executes")
+        .check()
+        .expect("no errors");
 }
 
 #[tokio::test]
@@ -30,7 +42,10 @@ async fn trajectory_thresholds_are_seeded() {
     db.query(SCHEMA_TRAJECTORY).await.unwrap().check().unwrap();
     let tca: Option<f64> = db
         .query("SELECT VALUE tool_call_accuracy FROM trajectory_thresholds:`TRAJ-001@0.1.0`")
-        .await.unwrap().take(0).unwrap();
+        .await
+        .unwrap()
+        .take(0)
+        .unwrap();
     assert!((tca.unwrap() - 0.80).abs() < 1e-9);
 }
 
@@ -44,13 +59,22 @@ async fn metrics_are_referenced_not_defined() {
     // Every referenced metric carries a canonical Agent-Metrics id.
     let refs: Vec<String> = db
         .query("SELECT VALUE ref FROM metric_ref WHERE ref = NONE")
-        .await.unwrap().take(0).unwrap();
-    assert!(refs.is_empty(), "every metric_ref must carry an Agent-Metrics id");
+        .await
+        .unwrap()
+        .take(0)
+        .unwrap();
+    assert!(
+        refs.is_empty(),
+        "every metric_ref must carry an Agent-Metrics id"
+    );
 
     // CLEAR dimensions resolve to Agent-Metrics, not to a local formula.
     let cna: Option<String> = db
         .query("SELECT VALUE ref FROM metric_ref:cna")
-        .await.unwrap().take(0).unwrap();
+        .await
+        .unwrap()
+        .take(0)
+        .unwrap();
     assert_eq!(cna.as_deref(), Some("agent-metrics:cna@1.0.0"));
 
     // No formula functions are defined by Bench (would error if called).
@@ -67,6 +91,9 @@ async fn amb_001_thresholds_are_seeded() {
     db.query(SCHEMA_MEMORY).await.unwrap().check().unwrap();
     let recall: Option<f64> = db
         .query("SELECT VALUE recall_accuracy FROM memory_thresholds:`AMB-001@0.1.0`")
-        .await.unwrap().take(0).unwrap();
+        .await
+        .unwrap()
+        .take(0)
+        .unwrap();
     assert!((recall.unwrap() - 0.70).abs() < 1e-9);
 }
