@@ -12,7 +12,7 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# Least privilege: jobs only read the repo. Override per-job if a step needs more.
+# Least privilege: jobs only read the repo.
 permissions:
   contents: read
 
@@ -30,9 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
+      - run: rustup component add rustfmt
       - run: cargo fmt --all --check
 
   clippy:
@@ -48,13 +46,8 @@ jobs:
             flags: "--features server"
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: platform
-      - run: cargo clippy --all-targets ${{ matrix.flags }} -- -D warnings
+      - run: rustup component add clippy
+      - run: cargo clippy --all-targets --locked ${{ matrix.flags }} -- -D warnings
 
   test:
     name: test (${{ matrix.features }})
@@ -69,25 +62,16 @@ jobs:
             flags: "--features server"
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: platform
-      - run: cargo test ${{ matrix.flags }} --locked --verbose
+      - run: cargo test --locked ${{ matrix.flags }} --verbose
 
   audit:
     name: cargo-audit (advisory)
     runs-on: ubuntu-latest
     # Advisory for now: the backlog of existing advisories is tracked separately
     # (see Dependabot). Flip `continue-on-error` to false once the backlog is
-    # cleared so new vulnerabilities hard-block. Runs cargo-audit directly so it
-    # needs only read access to the repo (no elevated GITHUB_TOKEN).
+    # cleared so new vulnerabilities hard-block.
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: platform
       - run: cargo install cargo-audit --locked
       - run: cargo audit
